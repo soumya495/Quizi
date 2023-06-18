@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import connect from "./config/database.js";
+import userRoutes from "./routes/user.js";
 
 const app = express();
 
@@ -26,6 +27,7 @@ app.use(
 );
 
 // App Routes
+app.use("/api/v1/user", userRoutes);
 
 // Test Route
 app.get("/", (req, res) => {
