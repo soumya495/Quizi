@@ -1,11 +1,12 @@
 import mongoose from "mongoose";
-import nanoid from "nanoid";
+import { nanoid } from "nanoid";
 
 const GroupSchema = new mongoose.Schema(
   {
     joiningLink: {
       type: String,
       required: true,
+      unique: true,
       default: nanoid(10),
     },
     groupName: {
