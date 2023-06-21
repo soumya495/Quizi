@@ -3,9 +3,12 @@ import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import connect from "./config/database.js";
+import cloudinaryConnect from "./config/cloudinary.js";
 import auth from "./middlewares/auth.js";
+import validateQuizAdmin from "./middlewares/quiz.js";
 import userRoutes from "./routes/user.js";
 import groupRoutes from "./routes/group.js";
+import quizRoutes from "./routes/quiz.js";
 
 const app = express();
 
@@ -17,6 +20,9 @@ const PORT = process.env.PORT || 4000;
 
 // Connecting to database
 connect();
+
+// Connect to Cloudinary
+cloudinaryConnect();
 
 // Middlewares
 app.use(express.json());
@@ -31,6 +37,7 @@ app.use(
 // App Routes
 app.use("/api/v1/user", userRoutes);
 app.use("/api/v1/group", auth, groupRoutes);
+app.use("/api/v1/quiz", auth, validateQuizAdmin, quizRoutes);
 
 // Test Route
 app.get("/", (req, res) => {
