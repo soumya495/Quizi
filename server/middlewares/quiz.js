@@ -1,5 +1,5 @@
-import Group from "../models/Group";
-import User from "../models/User";
+import Group from "../models/Group.js";
+import User from "../models/User.js";
 
 // Check whether quizAdmin is User or Group
 // Public quiz can be created by any user
@@ -8,7 +8,7 @@ const validateQuizAdmin = async (req, res, next) => {
   const { quizAdmin } = req.body;
 
   if (!quizAdmin) {
-    return res.status(400).send({ message: "Quiz Admin is required" });
+    return res.status(400).json({ message: "Quiz Admin is required" });
   }
 
   const userId = req.user._id;
@@ -21,7 +21,7 @@ const validateQuizAdmin = async (req, res, next) => {
       req.quizAdminType = "User";
       return next();
     } else {
-      return res.status(400).send({ message: "Invalid Request" });
+      return res.status(400).json({ message: "Invalid Request" });
     }
   } else {
     // If Group, check whether group exists
@@ -32,11 +32,11 @@ const validateQuizAdmin = async (req, res, next) => {
         req.quizAdminType = "Group";
         return next();
       } else {
-        return res.status(400).send({ message: "Invalid Request" });
+        return res.status(400).json({ message: "Invalid Request" });
       }
     } else {
       // If neither, return error
-      return res.status(400).send({ message: "Invalid Request" });
+      return res.status(400).json({ message: "Invalid Request" });
     }
   }
 };

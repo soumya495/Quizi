@@ -38,7 +38,6 @@ const QuestionSchema = new mongoose.Schema(
           },
         },
       ],
-      validate: [optionsLimit, "{PATH} exceeds the limit of 5"],
       required: true,
     },
     points: {
@@ -50,9 +49,5 @@ const QuestionSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
-
-function optionsLimit(options) {
-  return options.length <= 5;
-}
 
 export default mongoose.model("Question", QuestionSchema);

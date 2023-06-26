@@ -7,7 +7,7 @@ import {
   editQuiz,
   editQuizQuestion,
   submitQuiz,
-} from "../controllers/quiz";
+} from "../controllers/quiz.js";
 
 const router = Router();
 

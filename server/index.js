@@ -2,6 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import cors from "cors";
+import fileUpload from "express-fileupload";
 import connect from "./config/database.js";
 import cloudinaryConnect from "./config/cloudinary.js";
 import auth from "./middlewares/auth.js";
@@ -31,6 +32,12 @@ app.use(
   cors({
     origin: "*",
     credentials: true,
+  })
+);
+app.use(
+  fileUpload({
+    useTempFiles: true,
+    tempFileDir: "/tmp/",
   })
 );
 

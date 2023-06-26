@@ -11,7 +11,7 @@ const mailSender = async (email, title, body) => {
       secure: false,
     });
 
-    let info = await transporter.sendMail({
+    let info = await transporter.jsonMail({
       from: `"Quizi | Soumya" <${process.env.MAIL_USER}>`, // sender address
       to: `${email}`, // list of receivers
       subject: `${title}`, // Subject line

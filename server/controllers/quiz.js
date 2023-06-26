@@ -1,4 +1,6 @@
+import Question from "../models/Question.js";
 import Quiz from "../models/Quiz.js";
+import uploadImageToCloudinary from "../utils/cloudinaryUpload.js";
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -14,13 +16,13 @@ export const createQuiz = async (req, res) => {
   // Validate the request body
   if (
     !(
-      quizName.trim() &&
-      quizDescription.trim() &&
-      quizDuration.trim() &&
-      quizStatus.trim()
+      quizName?.trim() &&
+      quizDescription?.trim() &&
+      quizDuration > 0 &&
+      quizStatus?.trim()
     )
   ) {
-    res.status(400).send({ message: "All input is required" });
+    res.status(400).json({ success: false, message: "All input is required" });
   }
 
   // from middleware
@@ -40,10 +42,14 @@ export const createQuiz = async (req, res) => {
     // Save the quiz
     await quiz.save();
     // Return the created quiz
-    return res.status(201).json({ message: "Quiz created successfully", quiz });
+    return res
+      .status(201)
+      .json({ success: true, message: "Quiz created successfully", quiz });
   } catch (error) {
     console.error("Error In Creating Quiz ", error);
-    return res.status(500).json({ message: "Failed to create quiz" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to create quiz" });
   }
 };
 
@@ -59,14 +65,18 @@ export const editQuiz = async (req, res) => {
 
   // Validate the request parameters
   if (!quizId) {
-    return res.status(400).send({ message: "Quiz ID is required" });
+    return res
+      .status(400)
+      .json({ success: false, message: "Quiz ID is required" });
   }
 
   const quiz = await Quiz.findById(quizId);
 
   // Validate the quiz
   if (!quiz) {
-    return res.status(400).send({ message: "Quiz doesn't exist" });
+    return res
+      .status(400)
+      .json({ success: false, message: "Quiz doesn't exist" });
   }
 
   const allowedFields = [
@@ -89,13 +99,14 @@ export const editQuiz = async (req, res) => {
     await Quiz.updateMany({ _id: quizId }, { $set: fieldsToUpdate });
 
     // Return the updated quiz or success message
-    res.json({
+    res.status(200).json({
+      success: true,
       message: "Quiz updated successfully",
       updatedFields: fieldsToUpdate,
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Failed to update quiz" });
+    res.status(500).json({ success: false, message: "Failed to update quiz" });
   }
 };
 
@@ -111,14 +122,108 @@ export const addQuizQuestion = async (req, res) => {
 
   // Validate the request parameters
   if (!quizId) {
-    return res.status(400).send({ message: "Quiz ID is required" });
+    return res
+      .status(400)
+      .json({ success: false, message: "Quiz ID is required" });
   }
 
   const quiz = await Quiz.findById(quizId);
 
   // Validate the quiz
   if (!quiz) {
-    return res.status(400).send({ message: "Quiz doesn't exist" });
+    return res
+      .status(400)
+      .json({ success: false, message: "Quiz doesn't exist" });
+  }
+
+  const { question, questionOptions, questionPoints } = req.body;
+
+  // Validate the request body
+  if (
+    !(
+      question.trim() &&
+      questionPoints > 0 &&
+      questionOptions.length > 2 &&
+      questionOptions.length <= 5
+    )
+  ) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Invalid Question" });
+  }
+
+  // Validate and add the question options
+  const questOptions = [];
+
+  try {
+    let numberOfCorrectOptions = 0;
+    questionOptions.forEach((questOpt) => {
+      const { option, correct } = questOpt;
+      if (option.trim() && typeof correct === "boolean") {
+        if (correct) {
+          numberOfCorrectOptions++;
+        }
+        questOptions.push({ option, correct });
+      } else {
+        return res
+          .status(400)
+          .json({ success: false, message: "Invalid Question" });
+      }
+    });
+
+    // Validate the number of correct options
+    let questType;
+    if (numberOfCorrectOptions === 0) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid Question" });
+    }
+
+    // Determine the question type (Single or Multiple)
+    if (numberOfCorrectOptions === 1) {
+      questType = "Single Correct";
+    } else {
+      questType = "Multiple Correct";
+    }
+
+    // Upload the option images if any
+    questOptions.forEach(async (_, index) => {
+      let optionImage = req.files?.[`optionImage${index + 1}`];
+      if (optionImage) {
+        optionImage = await uploadImageToCloudinary(optionImage);
+      }
+      questOptions[index].optionImage = optionImage;
+    });
+
+    // Upload question image if it exists
+    let questionImage = req.files?.questionImage;
+    if (questionImage) {
+      questionImage = await uploadImageToCloudinary(questionImage);
+    }
+
+    // Create the question object
+    let quest = {
+      quizId,
+      question,
+      questionImage: questionImage ? questionImage : undefined,
+      questionType: questType,
+      options: questOptions,
+      points: questionPoints,
+    };
+
+    quest = new Question(quest);
+    console.log("question", quest);
+    // Save the question to the database
+    const savedQuestion = await quest.save();
+    // Return the saved question
+    res.status(201).json({
+      success: true,
+      message: "Question added successfully",
+      question: savedQuestion,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Failed to add question" });
   }
 };
 
