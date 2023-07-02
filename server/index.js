@@ -8,6 +8,7 @@ import cloudinaryConnect from "./config/cloudinary.js";
 import auth from "./middlewares/auth.js";
 import validateQuizAdmin from "./middlewares/quiz.js";
 import userRoutes from "./routes/user.js";
+import profileRoutes from "./routes/profile.js";
 import groupRoutes from "./routes/group.js";
 import quizRoutes from "./routes/quiz.js";
 
@@ -38,11 +39,13 @@ app.use(
   fileUpload({
     useTempFiles: true,
     tempFileDir: "/tmp/",
+    safeFileNames: true,
   })
 );
 
 // App Routes
 app.use("/api/v1/user", userRoutes);
+app.use("/api/v1/profile", auth, profileRoutes);
 app.use("/api/v1/group", auth, groupRoutes);
 app.use("/api/v1/quiz", auth, validateQuizAdmin, quizRoutes);
 

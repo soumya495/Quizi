@@ -1,9 +1,9 @@
-import otpGenerator from "otp-generator";
 import * as crypto from "crypto";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import mailSender from "../utils/mailSender.js";
 import otpTemplate from "../utils/mailTemplates/otp.js";
+import { createOtp, verifyOtp } from "../utils/otp.js";
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -12,7 +12,7 @@ import otpTemplate from "../utils/mailTemplates/otp.js";
 // @desc   Send Otp to user
 // route   POST /api/user/sendOtp
 // access  Public
-const sendOtp = async (req, res) => {
+export const sendOtp = async (req, res) => {
   console.log("/api/user/sendOtp Body......", req.body);
   const { email } = req.body;
 
@@ -23,25 +23,7 @@ const sendOtp = async (req, res) => {
     });
   }
 
-  // Generate a 6 digit numeric OTP
-  const otp = otpGenerator.generate(6, {
-    upperCaseAlphabets: false,
-    lowerCaseAlphabets: false,
-    specialChars: false,
-  });
-  //5 Minutes in miliseconds
-  const ttl = 5 * 60 * 1000;
-  //timestamp to 5 minutes in the future
-  const expires = Date.now() + ttl;
-  // email.otp.expiry_timestamp
-  const data = `${email}.${otp}.${expires}`;
-  // creating SHA256 hash of the data
-  const hash = crypto
-    .createHmac("sha256", process.env.SECRET)
-    .update(data)
-    .digest("hex");
-  // Hash.expires, format to send to the user
-  const fullHash = `${hash}.${expires}`;
+  const { otp, otpToken } = createOtp(email);
 
   // Sending OTP to the user via email
   try {
@@ -59,49 +41,17 @@ const sendOtp = async (req, res) => {
     });
   }
 
-  res.status(200).json({
-    success: true,
-    message: "Otp Sent Successfully",
-    data: {
-      otp: otp,
-      hash: fullHash,
-    },
-  });
-};
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-// @desc   Verify Otp
-const verifyOtp = (email, otp, hash) => {
-  // Seperate Hash value and expires from the hash returned from the user
-  let [hashValue, expires] = hash.split(".");
-  // Check if expiry time has passed
-  let now = Date.now();
-  if (now > parseInt(expires)) {
-    return {
-      success: false,
-      message: "OTP has expired",
-    };
-  }
-  // Calculate new hash with the same key and the same algorithm
-  let data = `${email}.${otp}.${expires}`;
-  let newCalculatedHash = crypto
-    .createHmac("sha256", process.env.SECRET)
-    .update(data)
-    .digest("hex");
-  // Match the hashes
-  if (newCalculatedHash !== hashValue) {
-    return {
-      success: false,
-      message: "Invalid OTP",
-    };
-  }
-
-  return {
-    success: true,
-  };
+  // set otptoken in cookie and send response
+  res
+    .cookie("otpToken", otpToken, {
+      httpOnly: true,
+      maxAge: 5 * 60 * 1000,
+    })
+    .status(200)
+    .json({
+      success: true,
+      message: "Otp Sent Successfully",
+    });
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -111,17 +61,25 @@ const verifyOtp = (email, otp, hash) => {
 // @desc   Sign New User Up
 // route   POST /api/user/signup
 // access  Public
-const signUp = async (req, res) => {
+export const signUp = async (req, res) => {
   console.log("/api/user/signup Body......", req.body);
-  const { firstName, lastName, email, password, otp, hash } = req.body;
+  const { firstName, lastName, email, password, otp } = req.body;
+
+  const otpToken = req.cookies?.otpToken;
+
+  if (!otpToken) {
+    return res.status(400).json({
+      success: false,
+      message: "OTP Token not found",
+    });
+  }
 
   if (
     !firstName.trim() ||
     !lastName.trim() ||
     !email.trim() ||
     !password.trim() ||
-    !otp.trim() ||
-    !hash.trim()
+    !otp.trim()
   ) {
     return res.status(400).json({
       success: false,
@@ -139,7 +97,7 @@ const signUp = async (req, res) => {
   }
 
   // Verify OTP
-  const otpVerificationResult = verifyOtp(email, otp, hash);
+  const otpVerificationResult = verifyOtp(otpToken, email, otp);
   if (!otpVerificationResult.success) {
     return res.status(400).json(otpVerificationResult);
   }
@@ -169,7 +127,8 @@ const signUp = async (req, res) => {
     });
   }
 
-  res.status(200).json({
+  // clear otpToken cookie and send response
+  res.clearCookie("otpToken").status(200).json({
     success: true,
     message: "User Signed Up Successfully",
   });
@@ -182,7 +141,7 @@ const signUp = async (req, res) => {
 // @desc   Log User In
 // route   POST /api/user/login
 // access  Public
-const login = async (req, res) => {
+export const login = async (req, res) => {
   const { email, password } = req.body;
 
   if (!email.trim() || !password.trim()) {
@@ -233,6 +192,7 @@ const login = async (req, res) => {
   });
 
   existingUser.password = undefined;
+  existingUser.profileImage = existingUser.profileImage?.secure_url || "";
 
   res.status(200).json({
     success: true,
@@ -242,5 +202,3 @@ const login = async (req, res) => {
     },
   });
 };
-
-export { sendOtp, signUp, login };

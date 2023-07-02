@@ -24,8 +24,47 @@ const UserSchema = new mongoose.Schema(
       trim: true,
     },
     profileImage: {
-      type: String,
+      type: {
+        secure_url: {
+          type: String,
+          default: "",
+        },
+        public_id: {
+          type: String,
+          default: "",
+        },
+      },
     },
+    createdGroups: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Group",
+      },
+    ],
+    joinedGroups: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Group",
+      },
+    ],
+    createdQuizzes: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Quiz",
+      },
+    ],
+    attemptedQuizzes: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Quiz",
+      },
+    ],
+    submittedQuizes: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Quiz",
+      },
+    ],
   },
   {
     timestamps: true,

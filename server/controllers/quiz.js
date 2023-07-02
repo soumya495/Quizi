@@ -1,6 +1,6 @@
 import Question from "../models/Question.js";
 import Quiz from "../models/Quiz.js";
-import uploadImageToCloudinary from "../utils/cloudinaryUpload.js";
+// import uploadImageToCloudinary from "../utils/cloudinaryUpload.js";
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -10,18 +10,10 @@ import uploadImageToCloudinary from "../utils/cloudinaryUpload.js";
 // route   POST /api/quiz/create
 // access  Private
 export const createQuiz = async (req, res) => {
-  const { quizName, quizDescription, quizDuration, quizStatus, quizAdmin } =
-    req.body;
+  const { quizName, quizDescription, quizDuration, quizAdmin } = req.body;
 
   // Validate the request body
-  if (
-    !(
-      quizName?.trim() &&
-      quizDescription?.trim() &&
-      quizDuration > 0 &&
-      quizStatus?.trim()
-    )
-  ) {
+  if (!(quizName?.trim() && quizDescription?.trim() && quizDuration > 0)) {
     res.status(400).json({ success: false, message: "All input is required" });
   }
 
@@ -35,7 +27,7 @@ export const createQuiz = async (req, res) => {
     quizDescription,
     quizDuration,
     quizType: quizAdminType === "User" ? "Public" : "Private",
-    quizStatus,
+    quizStatus: "Draft",
   });
 
   try {
@@ -143,7 +135,7 @@ export const addQuizQuestion = async (req, res) => {
     !(
       question.trim() &&
       questionPoints > 0 &&
-      questionOptions.length > 2 &&
+      questionOptions.length >= 2 &&
       questionOptions.length <= 5
     )
   ) {
@@ -154,9 +146,9 @@ export const addQuizQuestion = async (req, res) => {
 
   // Validate and add the question options
   const questOptions = [];
+  let numberOfCorrectOptions = 0;
 
   try {
-    let numberOfCorrectOptions = 0;
     questionOptions.forEach((questOpt) => {
       const { option, correct } = questOpt;
       if (option.trim() && typeof correct === "boolean") {
@@ -190,7 +182,7 @@ export const addQuizQuestion = async (req, res) => {
     questOptions.forEach(async (_, index) => {
       let optionImage = req.files?.[`optionImage${index + 1}`];
       if (optionImage) {
-        optionImage = await uploadImageToCloudinary(optionImage);
+        // optionImage = await uploadImageToCloudinary(optionImage);
       }
       questOptions[index].optionImage = optionImage;
     });
@@ -198,7 +190,7 @@ export const addQuizQuestion = async (req, res) => {
     // Upload question image if it exists
     let questionImage = req.files?.questionImage;
     if (questionImage) {
-      questionImage = await uploadImageToCloudinary(questionImage);
+      // questionImage = await uploadImageToCloudinary(questionImage);
     }
 
     // Create the question object
@@ -234,7 +226,129 @@ export const addQuizQuestion = async (req, res) => {
 // @desc   Edit a particular question of a quiz
 // route   PUT /api/quiz/edit-question/:quizId/:questionId
 // access  Private
-export const editQuizQuestion = async (req, res) => {};
+export const editQuizQuestion = async (req, res) => {
+  // validate the request parameters
+  const { quizId, questionId } = req.params;
+  if (!quizId || !questionId) {
+    return res.status(400).json({
+      success: false,
+      message: "Quiz ID and Question ID are required",
+    });
+  }
+
+  try {
+    const quiz = await Quiz.findById(quizId);
+
+    if (!quiz) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Quiz doesn't exist" });
+    }
+
+    const question = await Question.findById(questionId);
+
+    if (!question) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Question doesn't exist" });
+    }
+
+    if (!quiz.questions.includes(questionId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Question doesn't exist" });
+    }
+
+    const fieldsToUpdate = {};
+
+    if (req.body?.question) {
+      if (!req.body.question.trim())
+        return res
+          .status(400)
+          .json({ success: false, message: "Invalid Question" });
+
+      fieldsToUpdate.question = req.body.question;
+    }
+
+    if (req.body?.questionPoints) {
+      if (req.body.questionPoints <= 0)
+        return res
+          .status(400)
+          .json({ success: false, message: "Invalid Question" });
+
+      fieldsToUpdate.points = req.body.questionPoints;
+    }
+
+    if (req.body?.questionOptions) {
+      if (
+        !(
+          req.body?.questionOptions?.length >= 2 &&
+          req.body?.questionOptions?.length <= 5
+        )
+      ) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Invalid Question" });
+      }
+
+      const questOptions = [];
+      let numberOfCorrectOptions = 0;
+
+      req.body?.questionOptions.forEach((questOpt) => {
+        const { option, correct } = questOpt;
+        if (option.trim() && typeof correct === "boolean") {
+          if (correct) {
+            numberOfCorrectOptions++;
+          }
+          questOptions.push({ option, correct });
+        } else {
+          return res
+            .status(400)
+            .json({ success: false, message: "Invalid Question" });
+        }
+      });
+
+      fieldsToUpdate.options = questOptions;
+
+      // Validate the number of correct options
+      if (numberOfCorrectOptions === 0) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Invalid Question" });
+      }
+
+      // Determine the question type (Single or Multiple)
+      if (numberOfCorrectOptions === 1) {
+        fieldsToUpdate.questType = "Single Correct";
+      } else {
+        fieldsToUpdate.questType = "Multiple Correct";
+      }
+    }
+    // Upload and update the images if any
+    if (req.files) {
+      // Upload the question image if it exists
+      const questionImage = req.files?.questionImage;
+      if (questionImage) {
+        // const uploadedImage = await uploadImageToCloudinary(questionImage);
+        // fieldsToUpdate.questionImage = uploadedImage;
+      }
+
+      // Upload the option images if any
+      for (let index = 0; index < req.body.questionOptions.length; index++) {
+        const optionImage = req.files?.[`optionImage${index + 1}`];
+        if (optionImage) {
+          // const uploadedImage = await uploadImageToCloudinary(optionImage);
+          // fieldsToUpdate.options[index].optionImage = uploadedImage;
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Error in Updating Question", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to update question" });
+  }
+};
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -243,7 +357,60 @@ export const editQuizQuestion = async (req, res) => {};
 // @desc   Delete a particular question of a quiz
 // route   DELETE /api/quiz/delete-question/:quizId/:questionId
 // access  Private
-export const deleteQuizQuestion = async (req, res) => {};
+export const deleteQuizQuestion = async (req, res) => {
+  // validate the request parameters
+  const { quizId, questionId } = req.params;
+  if (!quizId || !questionId) {
+    return res.status(400).json({
+      success: false,
+      message: "Quiz ID and Question ID are required",
+    });
+  }
+
+  try {
+    const quiz = await Quiz.findById(quizId);
+
+    if (!quiz) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Quiz doesn't exist" });
+    }
+
+    const question = await Question.findById(questionId);
+
+    if (!question) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Question doesn't exist" });
+    }
+
+    if (!quiz.questions.includes(questionId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Question doesn't exist" });
+    }
+
+    // Delete the question from the quiz
+    quiz.questions = quiz.questions.filter(
+      (question) => question.toString() !== questionId
+    );
+
+    // Delete the question from the database
+    await question.remove();
+
+    // Save the quiz
+    await quiz.save();
+
+    return res
+      .status(200)
+      .json({ success: true, message: "Question deleted successfully" });
+  } catch (error) {
+    console.error("Error in Deleting Question", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to delete question" });
+  }
+};
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *

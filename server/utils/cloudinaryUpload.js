@@ -1,7 +1,11 @@
-import cloudinary from "cloudinary";
+import { v2 as cloudinary } from "cloudinary";
 
-export default async function uploadImageToCloudinary(file) {
-  const options = { folder: process.env.FOLDER_NAME };
+export async function uploadImageToCloudinary(file, folderName) {
+  const options = { folder: `${process.env.FOLDER_NAME}/${folderName}` };
   options.resource_type = "auto";
-  return await cloudinary.v2.uploader.upload(file.tempFilePath, options);
+  return await cloudinary.uploader.upload(file.tempFilePath, options);
+}
+
+export async function deleteImageFromCloudinary(publicId) {
+  return await cloudinary.uploader.destroy(publicId);
 }

@@ -11,16 +11,18 @@ const mailSender = async (email, title, body) => {
       secure: false,
     });
 
-    let info = await transporter.jsonMail({
+    const mailOptions = {
       from: `"Quizi | Soumya" <${process.env.MAIL_USER}>`, // sender address
       to: `${email}`, // list of receivers
       subject: `${title}`, // Subject line
-      html: `${body}`, // html body
-    });
-    console.log(info.response);
+      html: `${body}`, // email body
+    };
+
+    let info = transporter.sendMail(mailOptions);
+    console.log(info);
     return info;
   } catch (error) {
-    console.log(error.message);
+    console.log(error?.message);
     return error.message;
   }
 };
