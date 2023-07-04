@@ -40,6 +40,8 @@ export const updateUserDetails = async (req, res) => {
   const allowedFields = ["firstName", "lastName", "password"];
   const fieldsToUpdate = {};
 
+  let errorOccurred = false; // Flag to track if an error response has been sent
+
   // Extract only the allowed fields from the request body
   Object.keys(req.body).forEach((field) => {
     if (allowedFields.includes(field)) {
@@ -49,6 +51,7 @@ export const updateUserDetails = async (req, res) => {
         // check if old password is provided
         const oldPassword = req.body?.oldPassword;
         if (!oldPassword) {
+          errorOccurred = true;
           return res.status(400).json({
             success: false,
             message: "Old Password is required",
@@ -60,6 +63,7 @@ export const updateUserDetails = async (req, res) => {
           .update(oldPassword)
           .digest("hex");
         if (oldHashedPassword !== user.password) {
+          errorOccurred = true;
           return res.status(400).json({
             success: false,
             message: "Old Password is incorrect",
@@ -74,21 +78,24 @@ export const updateUserDetails = async (req, res) => {
       fieldsToUpdate[field] = updatedValue;
     }
   });
-  try {
-    // Update user details
-    await User.findByIdAndUpdate(user._id, {
-      $set: fieldsToUpdate,
-    });
 
-    return res.status(200).json({
-      success: true,
-      message: "User Details Updated Successfully",
-    });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: "Something went wrong",
-    });
+  if (!errorOccurred) {
+    try {
+      // Update user details
+      await User.findByIdAndUpdate(user._id, {
+        $set: fieldsToUpdate,
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: "User Details Updated Successfully",
+      });
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        message: "Something went wrong",
+      });
+    }
   }
 };
 

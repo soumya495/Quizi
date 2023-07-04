@@ -202,3 +202,69 @@ export const login = async (req, res) => {
     },
   });
 };
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// @desc   Forgot Password
+// route   POST /api/user/forgot-password
+// access  Public
+export const forgotPassword = async (req, res) => {
+  const { email, password, otp } = req.body;
+
+  const otpToken = req.cookies?.otpToken;
+
+  if (!otpToken) {
+    return res.status(400).json({
+      success: false,
+      message: "OTP Token not found",
+    });
+  }
+
+  if (!email.trim() || !password.trim() || !otp.trim()) {
+    return res.status(400).json({
+      success: false,
+      message: "All fields are required",
+    });
+  }
+
+  // Check if user exists
+  const user = User.findOne({ email });
+
+  if (!user) {
+    return res.status(400).json({
+      success: false,
+      message: "User does not exist",
+    });
+  }
+
+  // Verify OTP
+  const otpVerificationResult = verifyOtp(otpToken, email, otp);
+  if (!otpVerificationResult.success) {
+    return res.status(400).json(otpVerificationResult);
+  }
+
+  // hash the password
+  const hashedPassword = crypto
+    .createHmac("sha256", process.env.SECRET)
+    .update(password)
+    .digest("hex");
+
+  // Update user password
+  try {
+    await user.updateOne({ password: hashedPassword });
+
+    // clear otpToken cookie and send response
+    res.clearCookie("otpToken").status(200).json({
+      success: true,
+      message: "Password Updated Successfully",
+    });
+  } catch (error) {
+    console.log("Error Updating User Password", error);
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong",
+    });
+  }
+};
