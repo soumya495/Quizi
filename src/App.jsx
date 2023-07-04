@@ -1,7 +1,15 @@
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Home from "./pages/Home";
+import Signup from "./pages/Signup";
+import Error from "./pages/Error";
 export default function App() {
   return (
-    <div>
-      <h1 className="text-3xl">Quizi</h1>
-    </div>
+    <Router>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="*" element={<Error />} />
+      </Routes>
+    </Router>
   );
 }
