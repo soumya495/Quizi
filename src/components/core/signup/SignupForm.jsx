@@ -1,20 +1,60 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { useMutation } from "@tanstack/react-query";
 import TextInput from "../../reusable/TextInput";
 import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai";
+import { apiConnector } from "../../../services/apiConnector";
+import { SEND_OTP } from "../../../services/apis";
+import toast from "react-hot-toast";
+import { useUser } from "../../../store/useUser";
+import { useNavigate } from "react-router-dom";
 
 export default function SignupForm() {
+  // react-hook-form
   const {
     register,
     handleSubmit,
     getValues,
+    reset,
     formState: { errors },
   } = useForm();
 
+  const navigate = useNavigate();
+
+  // states for password and confirm password
+  // to show/hide password
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState("");
 
-  const onSubmit = (data) => console.log(data);
+  // access zustand store
+  const setSignupData = useUser((state) => state.setSignupData);
+
+  // mutation to send otp to email
+  const mutation = useMutation({
+    mutationFn: (payload) => {
+      return apiConnector("POST", SEND_OTP, payload, null, null, true);
+    },
+    onSuccess: () => {
+      // show success toast
+      toast.success("OTP sent successfully!");
+      // set signup data in global state
+      setSignupData(getValues());
+      // reset the form
+      reset();
+      // redirect to otp page
+      navigate("/otp");
+    },
+    onError: (error) => {
+      // show error toast
+      toast.error(error?.response?.data?.message || "Something went wrong!");
+    },
+  });
+
+  // handle form submission
+  const onSubmit = (data) => {
+    // send otp to email
+    mutation.mutate({ email: data?.email, type: "signup" });
+  };
 
   return (
     <form
@@ -30,6 +70,7 @@ export default function SignupForm() {
           label="First Name"
           placeholder="First Name"
           required={true}
+          disabled={mutation.isLoading}
         />
         {/* last name */}
         <TextInput
@@ -39,6 +80,7 @@ export default function SignupForm() {
           label="Last Name"
           placeholder="Last Name"
           required={true}
+          disabled={mutation.isLoading}
         />
       </div>
       {/* email */}
@@ -49,6 +91,7 @@ export default function SignupForm() {
         label="Email"
         placeholder="Enter your email address"
         required={true}
+        disabled={mutation.isLoading}
         validate={{
           maxLength: (v) =>
             v.length <= 50 || "The email should have at most 50 characters",
@@ -71,6 +114,7 @@ export default function SignupForm() {
               className={`input w-full max-w-none input-bordered ${
                 errors.password ? "input-error" : "input-primary"
               } w-full max-w-xs pr-10`}
+              disabled={mutation.isLoading}
               {...register("password", {
                 required: "Password is required",
                 minLength: {
@@ -109,6 +153,7 @@ export default function SignupForm() {
               className={`input w-full max-w-none input-bordered ${
                 errors.confirmPassword ? "input-error" : "input-primary"
               } w-full max-w-xs pr-10`}
+              disabled={mutation.isLoading}
               {...register("confirmPassword", {
                 required: "Please Confirm The Password",
                 validate: (value) =>
@@ -135,7 +180,12 @@ export default function SignupForm() {
         </div>
       </div>
       {/* submit button */}
-      <button className="btn btn-block btn-primary">Signup</button>
+      <button
+        disabled={mutation.isLoading}
+        className="btn btn-block btn-primary"
+      >
+        {mutation.isLoading ? "Loading..." : "Signup"}
+      </button>
     </form>
   );
 }

@@ -27,8 +27,8 @@ export default function Signup() {
           <SignupForm />
           <p className="text-sm mt-4">
             Already have an account?{" "}
-            <Link to="/login" className="link text-primary font-medium">
-              Login
+            <Link to="/login">
+              <span className="text-primary font-medium">Login</span>
             </Link>
           </p>
         </div>

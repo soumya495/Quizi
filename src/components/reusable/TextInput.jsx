@@ -5,6 +5,7 @@ export default function TextInput({
   label,
   placeholder,
   required = false,
+  disabled = false,
   validate = {},
 }) {
   const requiredMessage = required ? `${label} is required` : false;
@@ -17,6 +18,7 @@ export default function TextInput({
       <input
         id={label}
         placeholder={placeholder}
+        disabled={disabled}
         className={`input w-full max-w-none input-bordered ${
           errors[`${fieldName}`] ? "input-error" : "input-primary"
         } w-full`}

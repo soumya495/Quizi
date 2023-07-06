@@ -20,18 +20,14 @@ dotenv.config();
 // Setting up port number
 const PORT = process.env.PORT || 4000;
 
-// Connecting to database
-connect();
-
-// Connect to Cloudinary
-cloudinaryConnect();
+const allowedOrigins = ["http://localhost:5173"];
 
 // Middlewares
 app.use(express.json());
 app.use(cookieParser());
 app.use(
   cors({
-    origin: "*",
+    origin: allowedOrigins,
     credentials: true,
   })
 );
@@ -42,6 +38,12 @@ app.use(
     safeFileNames: true,
   })
 );
+
+// Connecting to database
+connect();
+
+// Connect to Cloudinary
+cloudinaryConnect();
 
 // App Routes
 app.use("/api/v1/user", userRoutes);

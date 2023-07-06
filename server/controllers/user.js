@@ -10,11 +10,19 @@ import { createOtp, verifyOtp } from "../utils/otp.js";
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // @desc   Send Otp to user
-// route   POST /api/user/sendOtp
+// route   POST /api/user/send-otp
 // access  Public
 export const sendOtp = async (req, res) => {
   console.log("/api/user/sendOtp Body......", req.body);
-  const { email } = req.body;
+  const { email, type } = req.body;
+
+  // Check if type is valid
+  if (!type || (type !== "signup" && type !== "forgot-password")) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid type",
+    });
+  }
 
   if (!email) {
     return res.status(400).json({
@@ -23,14 +31,14 @@ export const sendOtp = async (req, res) => {
     });
   }
 
-  const { otp, otpToken } = createOtp(email);
+  const { otp, otpToken } = createOtp(email, type);
 
   // Sending OTP to the user via email
   try {
     const mailResponse = await mailSender(
       email,
       "OTP for Quizi",
-      otpTemplate(otp)
+      otpTemplate(otp, type)
     );
     console.log("Otp Email Sent Succesfully", mailResponse);
   } catch (error) {
@@ -67,6 +75,9 @@ export const signUp = async (req, res) => {
 
   const otpToken = req.cookies?.otpToken;
 
+  console.log("cookies", req.cookies);
+  console.log("otpToken", otpToken);
+
   if (!otpToken) {
     return res.status(400).json({
       success: false,
@@ -97,7 +108,7 @@ export const signUp = async (req, res) => {
   }
 
   // Verify OTP
-  const otpVerificationResult = verifyOtp(otpToken, email, otp);
+  const otpVerificationResult = verifyOtp(otpToken, email, otp, "signup");
   if (!otpVerificationResult.success) {
     return res.status(400).json(otpVerificationResult);
   }
@@ -240,7 +251,12 @@ export const forgotPassword = async (req, res) => {
   }
 
   // Verify OTP
-  const otpVerificationResult = verifyOtp(otpToken, email, otp);
+  const otpVerificationResult = verifyOtp(
+    otpToken,
+    email,
+    otp,
+    "forgot-password"
+  );
   if (!otpVerificationResult.success) {
     return res.status(400).json(otpVerificationResult);
   }

@@ -75,11 +75,11 @@ export default function LoginForm() {
         )}
       </div>
       {/* forgot password */}
-      <Link to="/">
+      <Link to="/forgot-password-email">
         <p className="text-xs text-primary mb-3 text-right">Forgot password?</p>
       </Link>
       {/* submit button */}
-      <button className="btn btn-block btn-primary">Signup</button>
+      <button className="btn btn-block btn-primary">Login</button>
     </form>
   );
 }

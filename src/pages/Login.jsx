@@ -25,8 +25,8 @@ export default function Login() {
           <LoginForm />
           <p className="text-sm mt-4">
             Do not have an account?{" "}
-            <Link to="/signup" className="link text-primary font-medium">
-              Signup
+            <Link to="/signup">
+              <span className="text-primary font-medium">Signup</span>
             </Link>
           </p>
         </div>
