@@ -32,7 +32,7 @@ export default function Home() {
       </div>
       <div className="w-full mx-auto min-h-[8vh] bg-base-200 grid place-content-center">
         <p className="text-sm tracking-wider">
-          Created with ❤️ by{" "}
+          Created with 💚 by{" "}
           <a
             href="https://github.com/soumya495"
             target="_blank"

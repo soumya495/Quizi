@@ -75,9 +75,6 @@ export const signUp = async (req, res) => {
 
   const otpToken = req.cookies?.otpToken;
 
-  console.log("cookies", req.cookies);
-  console.log("otpToken", otpToken);
-
   if (!otpToken) {
     return res.status(400).json({
       success: false,
@@ -192,26 +189,22 @@ export const login = async (req, res) => {
     },
     process.env.SECRET,
     {
+      // set expiry to 1 day
       expiresIn: "1d",
     }
   );
 
-  res.cookie("token", token, {
-    httpOnly: true,
-    secure: true,
-    maxAge: 24 * 60 * 60 * 1000, // 1 day
-  });
-
-  existingUser.password = undefined;
-  existingUser.profileImage = existingUser.profileImage?.secure_url || "";
-
-  res.status(200).json({
-    success: true,
-    message: "User Logged In Successfully",
-    data: {
-      user: existingUser,
-    },
-  });
+  res
+    .cookie("token", token, {
+      httpOnly: true,
+      secure: true,
+      maxAge: 24 * 60 * 60 * 1000, // 1 day
+    })
+    .status(200)
+    .json({
+      success: true,
+      message: "User Logged In Successfully",
+    });
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -223,6 +216,8 @@ export const login = async (req, res) => {
 // access  Public
 export const forgotPassword = async (req, res) => {
   const { email, password, otp } = req.body;
+
+  console.log(req.body);
 
   const otpToken = req.cookies?.otpToken;
 

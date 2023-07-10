@@ -11,3 +11,4 @@ export const GET_USER = `${BASE_URL}/profile/user-details`;
 export const UPDATE_USER = `${BASE_URL}/profile/update-user-details`;
 export const UPLOAD_PROFILE_PIC = `${BASE_URL}/profile/upload-profile-picture`;
 export const REMOVE_PROFILE_PIC = `${BASE_URL}/profile/remove-profile-picture`;
+export const LOGOUT = `${BASE_URL}/profile/logout`;

@@ -1,21 +1,67 @@
 import { Link } from "react-router-dom";
 import logo from "../assets/logo-small.png";
+import TextInput from "../components/reusable/TextInput";
 import { useForm } from "react-hook-form";
-import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { apiConnector } from "../services/apiConnector";
+import { SEND_OTP } from "../services/apis";
+import { toast } from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
+import { useUser } from "../store/useUser";
 import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai";
+import { useState } from "react";
 
-export default function ResetPassword() {
+export default function ForgotPassword() {
   const {
     register,
     handleSubmit,
+    reset,
     getValues,
     formState: { errors },
   } = useForm();
 
+  // states for password and confirm password
+  // to show/hide password
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState("");
 
-  const onSubmit = (data) => console.log(data);
+  // react-router navigate hook
+  const navigate = useNavigate();
+
+  // access zustand store
+  const { setPayload, setOtpType } = useUser();
+
+  // mutation to send otp to email
+  const mutation = useMutation({
+    mutationFn: (payload) => {
+      return apiConnector("POST", SEND_OTP, payload);
+    },
+    onSuccess: () => {
+      // show success toast
+      toast.success("OTP sent successfully!");
+      // set the email in global state (signupdata)
+      setPayload({
+        email: getValues().email,
+        password: getValues().password,
+      });
+      // reset the form
+      reset();
+      // set otp type in global state
+      setOtpType("forgot-password");
+      // redirect to otp page
+      navigate("/otp");
+    },
+    onError: (error) => {
+      // show error toast
+      toast.error(error?.response?.data?.message || "Something went wrong!");
+    },
+  });
+
+  // handle form submit
+  // send otp to email
+  const onSubmit = (data) => {
+    mutation.mutate({ email: data?.email, type: "forgot-password" });
+  };
 
   return (
     <div className="flex flex-col md:flex-row h-screen">
@@ -33,13 +79,33 @@ export default function ResetPassword() {
             Reset your password
           </h1>
           <p className="mb-8 max-w-md text-center">
-            Enter your new password below.
+            We will send you an email to verify your account and reset your
+            password.
           </p>
           <form
-            className="w-11/12 mx-auto md:w-[350px] flex flex-col space-y-2"
+            className="w-11/12 mx-auto max-w-[500px] flex flex-col"
             onSubmit={handleSubmit(onSubmit)}
           >
-            <div>
+            {/* email */}
+            <TextInput
+              register={register}
+              errors={errors}
+              fieldName="email"
+              label="Email"
+              placeholder="Enter your email address"
+              required={true}
+              disabled={mutation.isLoading}
+              validate={{
+                maxLength: (v) =>
+                  v.length <= 50 ||
+                  "The email should have at most 50 characters",
+                matchPattern: (v) =>
+                  /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(v) ||
+                  "Email address must be a valid address",
+              }}
+            />
+            <div className="flex gap-x-4">
+              {/* password */}
               <div className="form-control w-full">
                 <label className="label" htmlFor="password">
                   <span className="label-text">Password</span>
@@ -115,7 +181,12 @@ export default function ResetPassword() {
                 )}
               </div>
             </div>
-            <button className="btn btn-block btn-primary">Submit</button>
+            <button
+              disabled={mutation.isLoading}
+              className="btn btn-block btn-primary"
+            >
+              Submit
+            </button>
           </form>
           <div className="text-sm mt-4">
             <Link to="/login">

@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation } from "@tanstack/react-query";
+import { useUser } from "../../../store/useUser";
+import { useNavigate } from "react-router-dom";
 import TextInput from "../../reusable/TextInput";
-import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai";
 import { apiConnector } from "../../../services/apiConnector";
 import { SEND_OTP } from "../../../services/apis";
 import toast from "react-hot-toast";
-import { useUser } from "../../../store/useUser";
-import { useNavigate } from "react-router-dom";
+import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai";
 
 export default function SignupForm() {
   // react-hook-form
@@ -19,6 +19,7 @@ export default function SignupForm() {
     formState: { errors },
   } = useForm();
 
+  // react-router navigate hook
   const navigate = useNavigate();
 
   // states for password and confirm password
@@ -27,18 +28,20 @@ export default function SignupForm() {
   const [showConfirmPassword, setShowConfirmPassword] = useState("");
 
   // access zustand store
-  const setSignupData = useUser((state) => state.setSignupData);
+  const { setPayload, setOtpType } = useUser();
 
   // mutation to send otp to email
   const mutation = useMutation({
     mutationFn: (payload) => {
-      return apiConnector("POST", SEND_OTP, payload, null, null, true);
+      return apiConnector("POST", SEND_OTP, payload);
     },
     onSuccess: () => {
       // show success toast
       toast.success("OTP sent successfully!");
-      // set signup data in global state
-      setSignupData(getValues());
+      // set payload(signup data) in global state
+      setPayload(getValues());
+      // set otp type in global state
+      setOtpType("signup");
       // reset the form
       reset();
       // redirect to otp page

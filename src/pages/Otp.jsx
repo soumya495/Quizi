@@ -7,34 +7,43 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { apiConnector } from "../services/apiConnector";
-import { SIGNUP } from "../services/apis";
+import { FORGOT_PASSWORD, SEND_OTP, SIGNUP } from "../services/apis";
 import { toast } from "react-hot-toast";
 
 export default function Otp() {
   // state for otp
   const [otp, setOtp] = useState("");
+  // react router navigate hook
   const navigate = useNavigate();
 
   // access zustand store
-  const signupData = useUser((state) => state.signupData);
-  const setSignupData = useUser((state) => state.setSignupData);
+  const { otpType, payload, setOtpType, setPayload } = useUser();
 
   useEffect(() => {
-    if (!signupData) {
+    // if otpType or payload is not set, redirect to signup page
+    if (!(otpType && payload)) {
       navigate("/signup");
     }
-  }, [navigate, signupData]);
+    console.log("payload", payload);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // mutation to verify otp and signup user
+  // mutation to signup user OR verify otp
   const mutation = useMutation({
     mutationFn: (payload) => {
-      return apiConnector("POST", SIGNUP, payload, null, null, true);
+      const API_URL = otpType === "signup" ? SIGNUP : FORGOT_PASSWORD;
+      return apiConnector("POST", API_URL, payload);
     },
     onSuccess: () => {
       // show success toast
-      toast.success("Signup successful!");
-      // reset the form
-      setSignupData(null);
+      toast.success(
+        otpType === "signup"
+          ? "Signup successful!"
+          : "Password reset successful!"
+      );
+      // reset the global state
+      setOtpType(null);
+      setPayload(null);
       // redirect to login page
       navigate("/login");
     },
@@ -46,19 +55,33 @@ export default function Otp() {
     },
   });
 
+  // mutation to re-send otp to email
+  const resendOtpMutation = useMutation({
+    mutationFn: (payload) => {
+      return apiConnector("POST", SEND_OTP, payload);
+    },
+    onSuccess: () => {
+      // show success toast
+      toast.success("OTP sent successfully!");
+    },
+    onError: (error) => {
+      // show error toast
+      toast.error(error?.response?.data?.message || "Something went wrong!");
+    },
+  });
+
   // handle Submit button click
   const handleOnClick = () => {
     if (otp.length === 6) {
-      mutation.mutate({ ...signupData, otp });
+      mutation.mutate({ ...payload, otp });
     } else {
       toast.error("Please enter a valid OTP!");
     }
   };
 
-  // handle go back
-  const handleGoBack = () => {
-    setSignupData(null);
-    navigate("/signup");
+  // handle re-send otp button click
+  const handleResendOtp = () => {
+    resendOtpMutation.mutate({ email: payload?.email, type: otpType });
   };
 
   return (
@@ -82,7 +105,11 @@ export default function Otp() {
             numInputs={6}
             renderSeparator={<span>-</span>}
             renderInput={(props) => (
-              <input disabled={mutation.isLoading} {...props} type="number" />
+              <input
+                disabled={mutation.isLoading || resendOtpMutation.isLoading}
+                {...props}
+                type="number"
+              />
             )}
             containerStyle={{
               columnGap: "0.25rem",
@@ -95,19 +122,20 @@ export default function Otp() {
             }}
           />
           <button
-            disabled={mutation.isLoading}
+            disabled={mutation.isLoading || resendOtpMutation.isLoading}
             onClick={handleOnClick}
             className="btn btn-block btn-primary"
           >
-            {mutation.isLoading ? "Loading..." : "Submit"}
+            {mutation.isLoading || resendOtpMutation.isLoading
+              ? "Loading..."
+              : "Submit"}
           </button>
-          <div className="text-sm mt-4">
-            <button onClick={handleGoBack} to="/signup">
-              <span className="text-primary font-medium">
-                {"<-"} Back to Signup
-              </span>
+          <p className="text-sm mt-4">
+            Didn&apos;t receive OTP ?{" "}
+            <button onClick={handleResendOtp}>
+              <span className="text-primary font-medium">Resend OTP</span>
             </button>
-          </div>
+          </p>
         </div>
       </div>
     </div>
