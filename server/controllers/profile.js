@@ -16,7 +16,6 @@ export const getUserDetails = async (req, res) => {
   const user = req.user;
 
   user.password = undefined;
-  user.profileImage = user.profileImage?.secure_url || "";
 
   res.status(200).json({
     success: true,
@@ -109,7 +108,7 @@ export const updateUserDetails = async (req, res) => {
 export const uploadProfilePicture = async (req, res) => {
   const user = req.user;
 
-  if (user.profileImage?.secure_url) {
+  if (user?.profileImage?.secure_url) {
     try {
       // Remove file from cloudinary
       await deleteImageFromCloudinary(user.profileImage?.public_id);
@@ -189,10 +188,7 @@ export const removeProfilePicture = async (req, res) => {
     await deleteImageFromCloudinary(user.profileImage?.public_id);
 
     // Update user profile picture
-    user.profileImage = {
-      secure_url: "",
-      public_id: "",
-    };
+    user.profileImage = undefined;
 
     await user.save();
 
