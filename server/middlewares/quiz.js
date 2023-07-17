@@ -1,10 +1,11 @@
-import Group from "../models/Group.js";
 import User from "../models/User.js";
+import Group from "../models/Group.js";
+import Quiz from "../models/Quiz.js";
 
-// Check whether quizAdmin is User or Group
+// Assign quizAdmin as User or Group
 // Public quiz can be created by any user
 // Private quiz can be created by only group admin
-const validateQuizAdmin = async (req, res, next) => {
+export const assignQuizAdmin = async (req, res, next) => {
   const { quizAdmin } = req.body;
 
   if (!quizAdmin) {
@@ -34,6 +35,7 @@ const validateQuizAdmin = async (req, res, next) => {
     if (grpAdmin) {
       if (grpAdmin.groupAdmin.toString() === userId.toString()) {
         req.quizAdminType = "Group";
+        req.group = grpAdmin;
         return next();
       } else {
         return res
@@ -49,4 +51,48 @@ const validateQuizAdmin = async (req, res, next) => {
   }
 };
 
-export default validateQuizAdmin;
+// Validate quizAdmin
+// Only quizAdmin can modify the quiz
+export const validateQuizAdmin = async (req, res, next) => {
+  const { quizId } = req.params;
+
+  // Validate the request parameters
+  if (!quizId) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Quiz ID is required" });
+  }
+
+  const quiz = await Quiz.findById(quizId);
+
+  // Validate the quiz
+  if (!quiz) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Quiz doesn't exist" });
+  }
+
+  const quizType = quiz.quizType;
+
+  // If the quizType is Public, then the quizAdminType should be User
+  if (
+    quizType === "Public" &&
+    quiz.quizAdmin.toString() !== req.user._id.toString()
+  ) {
+    return res.status(400).json({ success: false, message: "Invalid Request" });
+  }
+
+  // If the quizType is Private, then the quizAdminType is Group
+  // Validate whether the User is the admin of the group
+  if (quizType === "Private") {
+    const group = await Group.findById(quiz.quizAdmin);
+
+    if (group.groupAdmin.toString() !== req.user._id.toString()) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid Request" });
+    }
+  }
+
+  next();
+};

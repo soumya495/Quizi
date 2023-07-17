@@ -35,6 +35,12 @@ const GroupSchema = new mongoose.Schema(
         ref: "User",
       },
     ],
+    quizzes: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Quiz",
+      },
+    ],
     groupProfileImage: {
       type: String,
     },

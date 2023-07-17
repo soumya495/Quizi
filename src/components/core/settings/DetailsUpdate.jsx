@@ -57,6 +57,10 @@ export default function DetailsUpdate() {
     if (data.password !== "") {
       payload.password = data.password;
     }
+    if (Object.keys(payload).length === 0) {
+      toast.error("No changes made");
+      return;
+    }
     mutation.mutate(payload);
   };
 

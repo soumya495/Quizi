@@ -111,7 +111,7 @@ export default function LoginForm() {
         to="/forgot-password"
         className="text-xs text-primary max-w-max ml-auto"
       >
-        <p>Forgot password?</p>
+        <p className="mb-4">Forgot password?</p>
       </Link>
       {/* submit button */}
       <button

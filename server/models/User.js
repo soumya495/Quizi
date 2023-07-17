@@ -59,7 +59,7 @@ const UserSchema = new mongoose.Schema(
         ref: "Quiz",
       },
     ],
-    submittedQuizes: [
+    submittedQuizzes: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Quiz",

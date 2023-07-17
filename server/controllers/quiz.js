@@ -13,7 +13,14 @@ export const createQuiz = async (req, res) => {
   const { quizName, quizDescription, quizDuration, quizAdmin } = req.body;
 
   // Validate the request body
-  if (!(quizName?.trim() && quizDescription?.trim() && quizDuration > 0)) {
+  if (
+    !(
+      quizName?.trim() &&
+      quizDescription?.trim() &&
+      typeof quizDuration === "number" &&
+      quizDuration > 0
+    )
+  ) {
     res.status(400).json({ success: false, message: "All input is required" });
   }
 
@@ -33,6 +40,18 @@ export const createQuiz = async (req, res) => {
   try {
     // Save the quiz
     await quiz.save();
+
+    // push the quizId to the specific user/group
+    if (quizAdminType === "User") {
+      const user = req.user;
+      user.createdQuizzes.push(quiz._id);
+      await user.save();
+    } else {
+      const group = req.group;
+      group.quizzes.push(quiz._id);
+      await group.save();
+    }
+
     // Return the created quiz
     return res
       .status(201)
@@ -54,22 +73,6 @@ export const createQuiz = async (req, res) => {
 // access  Private
 export const editQuiz = async (req, res) => {
   const { quizId } = req.params;
-
-  // Validate the request parameters
-  if (!quizId) {
-    return res
-      .status(400)
-      .json({ success: false, message: "Quiz ID is required" });
-  }
-
-  const quiz = await Quiz.findById(quizId);
-
-  // Validate the quiz
-  if (!quiz) {
-    return res
-      .status(400)
-      .json({ success: false, message: "Quiz doesn't exist" });
-  }
 
   const allowedFields = [
     "quizName",

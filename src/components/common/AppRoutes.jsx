@@ -10,6 +10,7 @@ import ForgotPassword from "../../pages/ForgotPassword";
 import Profile from "../../pages/Profile";
 import Settings from "../../pages/Settings";
 import Error from "../../pages/Error";
+import CreatedQuizzes from "../../pages/CreatedQuizzes";
 
 export default function AppRoutes() {
   return (
@@ -62,6 +63,14 @@ export default function AppRoutes() {
         element={
           <PrivateRoute>
             <Settings />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/created-quizzes"
+        element={
+          <PrivateRoute>
+            <CreatedQuizzes />
           </PrivateRoute>
         }
       />
