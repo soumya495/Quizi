@@ -1,6 +1,6 @@
 import { Navigate } from "react-router-dom";
 import { useUser } from "../../store/useUser";
-import Navbar from "./Navbar";
+import Sidebar from "./Sidebar";
 
 export default function PrivateRoute({ children }) {
   const { isAuthenticated } = useUser();
@@ -8,8 +8,7 @@ export default function PrivateRoute({ children }) {
   if (isAuthenticated) {
     return (
       <>
-        <Navbar />
-        {children}
+        <Sidebar>{children}</Sidebar>
       </>
     );
   } else {
