@@ -100,14 +100,14 @@ export default function Sidebar({ children }) {
   function SidebarLink({ to, children }) {
     return (
       <Link to={to}>
-        <p
+        <div
           onClick={() => document.getElementById("my-drawer-2").click()}
           className={`py-3 px-4 rounded-md bg-base-100 ${
             matchRoute(to) ? "bg-opacity-100 font-semibold" : "bg-opacity-0"
           } hover:bg-opacity-30 transition-all duration-200`}
         >
           {children}
-        </p>
+        </div>
       </Link>
     );
   }
