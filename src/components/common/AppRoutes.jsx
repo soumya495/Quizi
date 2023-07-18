@@ -11,6 +11,7 @@ import Profile from "../../pages/Profile";
 import Settings from "../../pages/Settings";
 import Error from "../../pages/Error";
 import CreatedQuizzes from "../../pages/CreatedQuizzes";
+import QuizBuilder from "../../pages/QuizBuilder";
 
 export default function AppRoutes() {
   return (
@@ -71,6 +72,14 @@ export default function AppRoutes() {
         element={
           <PrivateRoute>
             <CreatedQuizzes />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/quiz-builder/:id"
+        element={
+          <PrivateRoute sidebar={false}>
+            <QuizBuilder />
           </PrivateRoute>
         }
       />

@@ -35,22 +35,48 @@ export default function CreateQuizModal() {
 
   const onSubmit = (data) => {
     console.log("form data", data);
+
+    // convert hh:mm:ss to milliseconds
+    const duration = data.quizDuration.split(":");
+    const durationInMilliseconds =
+      parseInt(duration[0]) * 60 * 60 * 1000 +
+      parseInt(duration[1]) * 60 * 1000 +
+      parseInt(duration[2]) * 1000;
+
     const payload = {
       ...data,
-      quizDuration: parseInt(data.quizDuration),
+      quizDuration: durationInMilliseconds,
       quizAdmin: userData._id,
     };
     mutation.mutate(payload);
   };
 
+  const validateDurationFormat = (value) => {
+    const durationRegex = /^([0-1][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$/;
+    return (
+      durationRegex.test(value) ||
+      "Please enter a valid duration in the format hh:mm:ss"
+    );
+  };
+
   const allowOnlyNumber = (value) => {
-    return value.replace(/[^0-9]/g, "");
+    return value.replace(/[^0-9:]/g, "");
   };
 
   return (
     <dialog id="create_quiz_modal" className="modal">
       <div method="dialog" className="modal-box">
-        <p className="text-xl font-bold">Create Quiz</p>
+        <div className="flex items-center justify-between">
+          <p className="text-xl font-bold">Create Quiz</p>
+          <button
+            onClick={() => {
+              window.create_quiz_modal.close();
+            }}
+            className="btn btn-sm btn-circle btn-ghost"
+          >
+            ✕
+          </button>
+        </div>
         <form onSubmit={handleSubmit(onSubmit)} className="mt-5 space-y-2">
           {/* Quiz Name */}
           <TextInput
@@ -64,7 +90,7 @@ export default function CreateQuizModal() {
           {/* Quiz Duration */}
           <div className="form-control w-full">
             <label className="label" htmlFor="quizDur">
-              <span className="label-text">Quiz Duration</span>
+              <span className="label-text">Quiz Duration (hh:mm:ss)</span>
             </label>
             <input
               id="quizDur"
@@ -74,18 +100,15 @@ export default function CreateQuizModal() {
               } w-full`}
               {...register("quizDuration", {
                 required: "Quiz Duration is required",
-                onChange: (e) => {
-                  e.target.value = allowOnlyNumber(e.target.value);
-                },
-                pattern: {
-                  value: /^[0-9]+$/,
-                  message: "Please enter a number",
-                },
+                validate: validateDurationFormat,
               })}
+              onChange={(e) => {
+                e.target.value = allowOnlyNumber(e.target.value);
+              }}
             />
-            {errors.quizDuration?.message && (
+            {errors.quizDuration && (
               <span className="text-xs text-red-500 pt-1">
-                {errors.quizDuration?.message}
+                {errors.quizDuration.message}
               </span>
             )}
           </div>
@@ -111,7 +134,7 @@ export default function CreateQuizModal() {
             )}
           </div>
           {/* Submit Button */}
-          <button className="btn btn-primary px-6">Submit</button>
+          <button className="btn btn-primary px-6">Proceed</button>
         </form>
       </div>
     </dialog>

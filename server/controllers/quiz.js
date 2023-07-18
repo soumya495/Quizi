@@ -1,6 +1,11 @@
+import mongoose from "mongoose";
 import Question from "../models/Question.js";
 import Quiz from "../models/Quiz.js";
-// import uploadImageToCloudinary from "../utils/cloudinaryUpload.js";
+import {
+  deleteImageFromCloudinary,
+  uploadImageToCloudinary,
+} from "../utils/cloudinaryUpload.js";
+import User from "../models/User.js";
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -10,7 +15,8 @@ import Quiz from "../models/Quiz.js";
 // route   POST /api/quiz/create
 // access  Private
 export const createQuiz = async (req, res) => {
-  const { quizName, quizDescription, quizDuration, quizAdmin } = req.body;
+  const { quizName, quizDescription, quizDuration, quizTopic, quizAdmin } =
+    req.body;
 
   // Validate the request body
   if (
@@ -18,10 +24,18 @@ export const createQuiz = async (req, res) => {
       quizName?.trim() &&
       quizDescription?.trim() &&
       typeof quizDuration === "number" &&
-      quizDuration > 0
+      quizDuration > 0 &&
+      quizTopic?.trim()
     )
   ) {
     res.status(400).json({ success: false, message: "All input is required" });
+  }
+
+  if (quizDuration < 60000) {
+    return res.status(400).json({
+      success: false,
+      message: "Quiz duration should be at least 1 minute",
+    });
   }
 
   // from middleware
@@ -33,6 +47,7 @@ export const createQuiz = async (req, res) => {
     quizName,
     quizDescription,
     quizDuration,
+    quizTopic,
     quizType: quizAdminType === "User" ? "Public" : "Private",
     quizStatus: "Draft",
   });
@@ -68,10 +83,121 @@ export const createQuiz = async (req, res) => {
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+// @desc   Get All Created Quizzes
+// route   GET /api/quiz/created-quizzes
+export const getCreatedQuizzes = async (req, res) => {
+  try {
+    const user = req.user;
+
+    // Pagination options
+    const page = parseInt(req.query.page) || 1; // Page number, default is 1
+    const pageSize = parseInt(req.query.pageSize) || 10; // Number of quizzes per page, default is 10
+
+    // Calculate the number of documents to skip based on the page and page size
+    const skip = (page - 1) * pageSize;
+
+    // Find the user by their ID and populate the 'createdQuizzes' field with the Quiz documents
+    const populatedUser = await User.findById(user._id).populate({
+      path: "createdQuizzes",
+      model: Quiz,
+      options: {
+        skip: skip,
+        limit: pageSize,
+      },
+    });
+
+    if (!populatedUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Extract the populated quizzes from the user object
+    const createdQuizzes = populatedUser.createdQuizzes;
+
+    // Get the total count of created quizzes for pagination
+    const totalQuizzesCount = user.createdQuizzes.length;
+    // Calculate the total number of pages
+    const totalPages = Math.ceil(totalQuizzesCount / pageSize);
+
+    res.status(200).json({
+      quizzes: createdQuizzes,
+      currentPage: page,
+      totalPages: totalPages,
+    });
+  } catch (error) {
+    console.error("Error fetching created quizzes:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// @desc   Get quiz details
+// route   GET /api/quiz/quiz-details/:quizId
+// access  Private
+export const getQuizDetails = async (req, res) => {
+  const { quizId } = req.params;
+
+  // Pagination options
+  const page = parseInt(req.query.page) || 1; // Page number, default is 1
+  const pageSize = parseInt(req.query.pageSize) || 10; // Number of quizzes per page, default is 10
+
+  // Calculate the number of documents to skip based on the page and page size
+  const skip = (page - 1) * pageSize;
+
+  try {
+    const quiz = await Quiz.findById(quizId);
+
+    const populatedQuiz = await Quiz.findById(quizId).populate({
+      path: "quizQuestions",
+      model: Question,
+      options: {
+        skip: skip,
+        limit: pageSize,
+      },
+    });
+
+    if (!populatedQuiz) {
+      return res.status(404).json({ message: "Quiz not found" });
+    }
+
+    // Get the total count of questions for pagination
+    const totalQuestionsCount = quiz.quizQuestions.length;
+
+    // Calculate the total number of pages
+    const totalPages = Math.ceil(totalQuestionsCount / pageSize);
+
+    return res.status(200).json({
+      quiz: populatedQuiz,
+      currentPage: page,
+      totalPages: totalPages,
+    });
+  } catch (error) {
+    console.error("Error fetching quiz details:", error);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 // @desc   Update Quiz
 // route   PUT /api/quiz/edit/:quizId
 // access  Private
 export const editQuiz = async (req, res) => {
+  // Only the quiz admin can update the quiz
+  if (req.userType === "Member") {
+    return res.status(403).json({ success: false, message: "Not Authorized" });
+  }
+
+  if (Object.keys(req.body).length === 0) {
+    return res
+      .status(400)
+      .json({ success: false, message: "No fields to update" });
+  }
+
   const { quizId } = req.params;
 
   const allowedFields = [
@@ -79,6 +205,7 @@ export const editQuiz = async (req, res) => {
     "quizDescription",
     "quizDuration",
     "quizStatus",
+    "quizTopic",
   ];
   const fieldsToUpdate = {};
 
@@ -113,33 +240,23 @@ export const editQuiz = async (req, res) => {
 // route   POST /api/quiz/add-question/:quizId
 // access  Private
 export const addQuizQuestion = async (req, res) => {
+  // Only the quiz admin can add questions to the quiz
+  if (req.userType === "Member") {
+    return res.status(403).json({ success: false, message: "Not Authorized" });
+  }
+
   const { quizId } = req.params;
-
-  // Validate the request parameters
-  if (!quizId) {
-    return res
-      .status(400)
-      .json({ success: false, message: "Quiz ID is required" });
-  }
-
-  const quiz = await Quiz.findById(quizId);
-
-  // Validate the quiz
-  if (!quiz) {
-    return res
-      .status(400)
-      .json({ success: false, message: "Quiz doesn't exist" });
-  }
+  const user = req.user;
 
   const { question, questionOptions, questionPoints } = req.body;
 
   // Validate the request body
   if (
     !(
-      question.trim() &&
+      question?.trim() &&
       questionPoints > 0 &&
-      questionOptions.length >= 2 &&
-      questionOptions.length <= 5
+      questionOptions?.length >= 2 &&
+      questionOptions?.length <= 5
     )
   ) {
     return res
@@ -181,23 +298,26 @@ export const addQuizQuestion = async (req, res) => {
       questType = "Multiple Correct";
     }
 
-    // Upload the option images if any
-    questOptions.forEach(async (_, index) => {
-      let optionImage = req.files?.[`optionImage${index + 1}`];
-      if (optionImage) {
-        // optionImage = await uploadImageToCloudinary(optionImage);
-      }
-      questOptions[index].optionImage = optionImage;
-    });
+    const questId = new mongoose.Types.ObjectId();
 
     // Upload question image if it exists
     let questionImage = req.files?.questionImage;
     if (questionImage) {
-      // questionImage = await uploadImageToCloudinary(questionImage);
+      questionImage = await uploadImageToCloudinary(
+        questionImage,
+        `${user._id}/Quizzes/${quizId}/${questId}`
+      );
+      questionImage = {
+        secure_url: questionImage?.secure_url,
+        public_id: questionImage?.public_id,
+      };
     }
+
+    const quiz = await Quiz.findById(quizId);
 
     // Create the question object
     let quest = {
+      __id: questId,
       quizId,
       question,
       questionImage: questionImage ? questionImage : undefined,
@@ -207,9 +327,16 @@ export const addQuizQuestion = async (req, res) => {
     };
 
     quest = new Question(quest);
-    console.log("question", quest);
+
     // Save the question to the database
     const savedQuestion = await quest.save();
+
+    // Add the question to the quiz
+    quiz.quizQuestions.push(savedQuestion._id);
+
+    // Save the quiz
+    await quiz.save();
+
     // Return the saved question
     res.status(201).json({
       success: true,
@@ -230,23 +357,16 @@ export const addQuizQuestion = async (req, res) => {
 // route   PUT /api/quiz/edit-question/:quizId/:questionId
 // access  Private
 export const editQuizQuestion = async (req, res) => {
+  // Only the quiz admin can add questions to the quiz
+  if (req.userType === "Member") {
+    return res.status(403).json({ success: false, message: "Not Authorized" });
+  }
+
   // validate the request parameters
   const { quizId, questionId } = req.params;
-  if (!quizId || !questionId) {
-    return res.status(400).json({
-      success: false,
-      message: "Quiz ID and Question ID are required",
-    });
-  }
 
   try {
     const quiz = await Quiz.findById(quizId);
-
-    if (!quiz) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Quiz doesn't exist" });
-    }
 
     const question = await Question.findById(questionId);
 
@@ -256,7 +376,7 @@ export const editQuizQuestion = async (req, res) => {
         .json({ success: false, message: "Question doesn't exist" });
     }
 
-    if (!quiz.questions.includes(questionId)) {
+    if (!quiz.quizQuestions.includes(questionId)) {
       return res
         .status(400)
         .json({ success: false, message: "Question doesn't exist" });
@@ -322,29 +442,24 @@ export const editQuizQuestion = async (req, res) => {
 
       // Determine the question type (Single or Multiple)
       if (numberOfCorrectOptions === 1) {
-        fieldsToUpdate.questType = "Single Correct";
+        fieldsToUpdate.questionType = "Single Correct";
       } else {
-        fieldsToUpdate.questType = "Multiple Correct";
+        fieldsToUpdate.questionType = "Multiple Correct";
       }
     }
-    // Upload and update the images if any
-    if (req.files) {
-      // Upload the question image if it exists
-      const questionImage = req.files?.questionImage;
-      if (questionImage) {
-        // const uploadedImage = await uploadImageToCloudinary(questionImage);
-        // fieldsToUpdate.questionImage = uploadedImage;
-      }
 
-      // Upload the option images if any
-      for (let index = 0; index < req.body.questionOptions.length; index++) {
-        const optionImage = req.files?.[`optionImage${index + 1}`];
-        if (optionImage) {
-          // const uploadedImage = await uploadImageToCloudinary(optionImage);
-          // fieldsToUpdate.options[index].optionImage = uploadedImage;
-        }
-      }
-    }
+    // save the question
+    const updatedQuestion = await Question.findByIdAndUpdate(
+      questionId,
+      fieldsToUpdate,
+      { new: true }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Question updated successfully",
+      question: updatedQuestion,
+    });
   } catch (error) {
     console.error("Error in Updating Question", error);
     return res
@@ -357,27 +472,162 @@ export const editQuizQuestion = async (req, res) => {
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+// @desc   Upload a question image
+// route   PUT /api/quiz/upload-question-image/:quizId/:questionId
+// access  Private
+export const uploadQuestionImage = async (req, res) => {
+  // Only the quiz admin can add questions to the quiz
+  if (req.userType === "Member") {
+    return res.status(403).json({ success: false, message: "Not Authorized" });
+  }
+
+  // validate the request parameters
+  const { quizId, questionId } = req.params;
+  try {
+    const quiz = await Quiz.findById(quizId);
+    const question = await Question.findById(questionId);
+
+    if (!question) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Question doesn't exist" });
+    }
+
+    if (!quiz.quizQuestions.includes(questionId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Question doesn't exist" });
+    }
+
+    if (question.questionImage?.secure_url) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Question already has an image" });
+    }
+
+    if (!req.files?.questionImage) {
+      return res
+        .status(400)
+        .json({ success: false, message: "No file uploaded" });
+    }
+
+    const file = req.files.questionImage;
+
+    // validate the file type
+    if (!file.mimetype.startsWith("image")) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Please upload an image file" });
+    }
+
+    const user = req.user;
+
+    // save the image to cloudinary
+    const questionImage = await uploadImageToCloudinary(
+      file,
+      `${user._id}/Quizzes/${quizId}/${questionId}`
+    );
+
+    // save the image url to the question
+    question.questionImage = {
+      secure_url: questionImage.secure_url,
+      public_id: questionImage.public_id,
+    };
+
+    await question.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Question image uploaded successfully",
+    });
+  } catch (error) {
+    console.error("Error in uploading question image", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to upload question image" });
+  }
+};
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// @desc   Remove a question image
+// route   DELETE /api/quiz/remove-question-image/:quizId/:questionId
+// access  Private
+export const deleteQuestionImage = async (req, res) => {
+  // Only the quiz admin can add questions to the quiz
+  if (req.userType === "Member") {
+    return res.status(403).json({ success: false, message: "Not Authorized" });
+  }
+
+  const { quizId, questionId } = req.params;
+  try {
+    const quiz = await Quiz.findById(quizId);
+    const question = await Question.findById(questionId);
+
+    if (!question) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Question doesn't exist" });
+    }
+
+    if (!quiz.quizQuestions.includes(questionId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Question doesn't exist" });
+    }
+
+    if (!question.questionImage?.secure_url) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Question has no Image" });
+    }
+
+    // remove the image from cloudinary
+    await deleteImageFromCloudinary(question.questionImage.public_id);
+
+    // remove the image url from the question
+    question.questionImage = undefined;
+
+    await question.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Question image deleted successfully",
+    });
+  } catch (error) {
+    console.error("Error in deleting question image", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to delete question image" });
+  }
+};
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 // @desc   Delete a particular question of a quiz
 // route   DELETE /api/quiz/delete-question/:quizId/:questionId
 // access  Private
 export const deleteQuizQuestion = async (req, res) => {
+  // Only the quiz admin can add questions to the quiz
+  if (req.userType === "Member") {
+    return res.status(403).json({ success: false, message: "Not Authorized" });
+  }
+
   // validate the request parameters
   const { quizId, questionId } = req.params;
-  if (!quizId || !questionId) {
+  if (!questionId) {
     return res.status(400).json({
       success: false,
-      message: "Quiz ID and Question ID are required",
+      message: "Question ID are required",
     });
   }
 
   try {
     const quiz = await Quiz.findById(quizId);
-
-    if (!quiz) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Quiz doesn't exist" });
-    }
 
     const question = await Question.findById(questionId);
 
@@ -387,19 +637,19 @@ export const deleteQuizQuestion = async (req, res) => {
         .json({ success: false, message: "Question doesn't exist" });
     }
 
-    if (!quiz.questions.includes(questionId)) {
+    if (!quiz.quizQuestions.includes(questionId)) {
       return res
         .status(400)
         .json({ success: false, message: "Question doesn't exist" });
     }
 
     // Delete the question from the quiz
-    quiz.questions = quiz.questions.filter(
-      (question) => question.toString() !== questionId
+    quiz.quizQuestions = quiz.quizQuestions.filter(
+      (question) => question.toString() !== questionId.toString()
     );
 
     // Delete the question from the database
-    await question.remove();
+    await Question.findByIdAndDelete(questionId);
 
     // Save the quiz
     await quiz.save();

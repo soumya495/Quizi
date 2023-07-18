@@ -4,7 +4,7 @@ import Quiz from "../models/Quiz.js";
 
 // Assign quizAdmin as User or Group
 // Public quiz can be created by any user
-// Private quiz can be created by only group admin
+// Private quiz can be created by only a group admin
 export const assignQuizAdmin = async (req, res, next) => {
   const { quizAdmin } = req.body;
 
@@ -75,24 +75,37 @@ export const validateQuizAdmin = async (req, res, next) => {
   const quizType = quiz.quizType;
 
   // If the quizType is Public, then the quizAdminType should be User
-  if (
-    quizType === "Public" &&
-    quiz.quizAdmin.toString() !== req.user._id.toString()
-  ) {
-    return res.status(400).json({ success: false, message: "Invalid Request" });
-  }
-
-  // If the quizType is Private, then the quizAdminType is Group
-  // Validate whether the User is the admin of the group
-  if (quizType === "Private") {
-    const group = await Group.findById(quiz.quizAdmin);
-
-    if (group.groupAdmin.toString() !== req.user._id.toString()) {
+  if (quizType === "Public") {
+    if (quiz.quizAdmin.toString() === req.user._id.toString()) {
+      req.userType = "Admin";
+      return next();
+    } else {
       return res
         .status(400)
         .json({ success: false, message: "Invalid Request" });
     }
   }
 
-  next();
+  // If the quizType is Private, then the quizAdminType is Group
+  // Validate whether the User is the admin of the group or a member of the group
+  if (quizType === "Private") {
+    const group = await Group.findById(quiz.quizAdmin);
+
+    // group admin
+    if (group.groupAdmin.toString() === req.user._id.toString()) {
+      req.userType = "Admin";
+      return next();
+    } else {
+      // group member
+      if (group.groupMembers.includes(req.user._id.toString())) {
+        req.userType = "Member";
+        return next();
+      } else {
+        // neither group admin nor group member
+        return res
+          .status(400)
+          .json({ success: false, message: "Invalid Request" });
+      }
+    }
+  }
 };

@@ -13,7 +13,16 @@ const QuestionSchema = new mongoose.Schema(
       trim: true,
     },
     questionImage: {
-      type: String,
+      type: {
+        secure_url: {
+          type: String,
+          default: "",
+        },
+        public_id: {
+          type: String,
+          default: "",
+        },
+      },
     },
     questionType: {
       type: String,
@@ -28,9 +37,6 @@ const QuestionSchema = new mongoose.Schema(
             type: String,
             required: true,
             trim: true,
-          },
-          optionImage: {
-            type: String,
           },
           correct: {
             type: Boolean,

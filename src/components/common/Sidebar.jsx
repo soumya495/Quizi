@@ -146,18 +146,21 @@ export default function Sidebar({ children }) {
           <label htmlFor="my-drawer-2" className="drawer-overlay"></label>
           <div className="menu justify-between p-4 py-8 w-72 h-full bg-base-200 text-base-content">
             {/* Sidebar content here */}
-            <Link to="/" className="mx-auto">
-              <img width={190} src={logo} loading="lazy" />
-            </Link>
-            <div className="flex flex-col text-base">
-              <SidebarLink to="/profile">My Profile</SidebarLink>
-              <SidebarLink to="/created-quizzes">Created Quizzes</SidebarLink>
-              <SidebarLink to="/attempted-quizzes">
-                Attempted Quizzes
-              </SidebarLink>
-              <SidebarLink to="/created-groups">Created Groups</SidebarLink>
-              <SidebarLink to="/joined-groups">Joined Groups</SidebarLink>
+            <div className="space-y-20">
+              <Link to="/" className="block w-max mx-auto">
+                <img width={190} src={logo} loading="lazy" />
+              </Link>
+              <div className="flex flex-col text-base">
+                <SidebarLink to="/profile">My Profile</SidebarLink>
+                <SidebarLink to="/created-quizzes">Created Quizzes</SidebarLink>
+                <SidebarLink to="/attempted-quizzes">
+                  Attempted Quizzes
+                </SidebarLink>
+                <SidebarLink to="/created-groups">Created Groups</SidebarLink>
+                <SidebarLink to="/joined-groups">Joined Groups</SidebarLink>
+              </div>
             </div>
+
             <div className="flex flex-col text-base">
               <SidebarLink to="/settings">
                 <div className="flex items-center">
