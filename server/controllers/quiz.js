@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import Question from "../models/Question.js";
 import Quiz from "../models/Quiz.js";
+import Group from "../models/Group.js";
 import {
   deleteImageFromCloudinary,
   uploadImageToCloudinary,
@@ -103,6 +104,7 @@ export const getCreatedQuizzes = async (req, res) => {
       options: {
         skip: skip,
         limit: pageSize,
+        sort: { createdAt: -1 },
       },
     });
 
@@ -119,9 +121,14 @@ export const getCreatedQuizzes = async (req, res) => {
     const totalPages = Math.ceil(totalQuizzesCount / pageSize);
 
     res.status(200).json({
-      quizzes: createdQuizzes,
-      currentPage: page,
-      totalPages: totalPages,
+      success: true,
+      message: "Created quizzes fetched successfully",
+      data: {
+        quizzes: createdQuizzes,
+        totalQuizzes: totalQuizzesCount,
+        currentPage: page,
+        totalPages: totalPages,
+      },
     });
   } catch (error) {
     console.error("Error fetching created quizzes:", error);
@@ -141,7 +148,7 @@ export const getQuizDetails = async (req, res) => {
 
   // Pagination options
   const page = parseInt(req.query.page) || 1; // Page number, default is 1
-  const pageSize = parseInt(req.query.pageSize) || 10; // Number of quizzes per page, default is 10
+  const pageSize = 10; // Number of quizzes per page, default is 10
 
   // Calculate the number of documents to skip based on the page and page size
   const skip = (page - 1) * pageSize;
@@ -149,14 +156,16 @@ export const getQuizDetails = async (req, res) => {
   try {
     const quiz = await Quiz.findById(quizId);
 
-    const populatedQuiz = await Quiz.findById(quizId).populate({
-      path: "quizQuestions",
-      model: Question,
-      options: {
-        skip: skip,
-        limit: pageSize,
-      },
-    });
+    const populatedQuiz = await Quiz.findById(quizId)
+      .populate({
+        path: "quizQuestions",
+        model: Question,
+        options: {
+          skip: skip,
+          limit: pageSize,
+        },
+      })
+      .populate("quizAdmin", "firstName lastName profilePicture");
 
     if (!populatedQuiz) {
       return res.status(404).json({ message: "Quiz not found" });
@@ -169,9 +178,13 @@ export const getQuizDetails = async (req, res) => {
     const totalPages = Math.ceil(totalQuestionsCount / pageSize);
 
     return res.status(200).json({
-      quiz: populatedQuiz,
-      currentPage: page,
-      totalPages: totalPages,
+      success: true,
+      message: "Quiz details fetched successfully",
+      data: {
+        quiz: populatedQuiz,
+        currentPage: page,
+        totalPages: totalPages,
+      },
     });
   } catch (error) {
     console.error("Error fetching quiz details:", error);
@@ -208,6 +221,17 @@ export const editQuiz = async (req, res) => {
     "quizTopic",
   ];
   const fieldsToUpdate = {};
+
+  if (
+    req.body?.["quizDuration"] &&
+    (typeof req.body?.["quizDuration"] !== "number" ||
+      req.body?.["quizDuration"] < 60000)
+  ) {
+    return res.status(400).json({
+      success: false,
+      message: "Quiz duration should be at least 1 minute",
+    });
+  }
 
   // Extract only the allowed fields from the request body
   Object.keys(req.body).forEach((key) => {

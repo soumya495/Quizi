@@ -15,3 +15,11 @@ export const LOGOUT = `${BASE_URL}/profile/logout`;
 
 // Quiz APIs
 export const CREATE_QUIZ = `${BASE_URL}/quiz/create`;
+export const GET_CREATED_QUIZZES = `${BASE_URL}/quiz/created-quizzes`;
+export const GET_QUIZ_DETAILS = `${BASE_URL}/quiz/quiz-details`;
+export const UPDATE_QUIZ = `${BASE_URL}/quiz/edit`;
+export const ADD_QUESTION = `${BASE_URL}/quiz/add-question`;
+export const UPDATE_QUESTION = `${BASE_URL}/quiz/edit-question`;
+export const UPLOAD_QUESTION_IMAGE = `${BASE_URL}/quiz/upload-question-image`;
+export const REMOVE_QUESTION_IMAGE = `${BASE_URL}/quiz/remove-question-image`;
+export const DELETE_QUESTION = `${BASE_URL}/quiz/delete-question`;
