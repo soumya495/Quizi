@@ -1,85 +1,88 @@
 import { useState } from "react";
-import CreateQuizForm from "../create-quiz/CreateQuizForm";
-import { BsChevronDown } from "react-icons/bs";
-import { useQuizDetails } from "../../../services/queryFunctions/quiz";
 import { useParams } from "react-router-dom";
-import { useEffect } from "react";
+import { useQuizDetails } from "../../../services/queryFunctions/quiz";
+import CreateQuizForm from "../create-quiz/CreateQuizForm";
+import AddQuizQuestion from "./AddQuizQuestion";
+import Accordion from "../../common/Accordion";
+import BuilderTabs from "./BuilderTabs";
+import { useQuiz } from "../../../store/useQuiz";
+import { truncate } from "../../../services/helpers";
+import { useSearchParams } from "react-router-dom";
 
-function Accordion({ title, children, index, open, setCurrentIndex }) {
-  return (
-    <details
-      open={open[index]}
-      className={`rounded-xl overflow-hidden transition-all duration-200`}
-    >
-      <summary
-        onClick={() => setCurrentIndex((prev) => (prev === index ? -1 : index))}
-        className="px-10 py-3 bg-neutral cursor-pointer flex items-center justify-between font-semibold"
-      >
-        {title}
-        <BsChevronDown
-          className={`inline-block text-xl ${
-            open[index] ? "rotate-0" : "rotate-180"
-          } transition-all duration-200`}
-        />
-      </summary>
-      <div className="bg-neutral bg-opacity-30 px-6 py-4 rounded-b-xl">
-        {children}
-      </div>
-    </details>
-  );
-}
+export default function BuilderArea({ setShowPreview, showModal }) {
+  const [open, setOpen] = useState("preview-accordion");
+  const [searchParams, setSearchParams] = useSearchParams();
 
-export default function BuilderArea({ quizData, setShowPreview }) {
+  const { quizDetails, questions: quizQuestions } = useQuiz();
+
   const { id: quizId } = useParams();
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [open, setOpen] = useState([true, false, false]);
-  const { refetch: refetchQuizDetails } = useQuizDetails(quizId);
-
-  useEffect(() => {
-    setOpen((prev) => prev.map((_, i) => i === currentIndex));
-  }, [currentIndex]);
+  const { data, refetch: refetchQuizDetails } = useQuizDetails(quizId);
+  const originalQuizData = data?.data?.data?.quiz;
 
   return (
-    <div className="w-11/12 max-w-[600px] mx-auto flex-1 py-10 space-y-4">
+    <div className="w-11/12 max-w-[600px] mx-auto flex-1 my-10 space-y-4">
+      <BuilderTabs />
       <button
         onClick={() => setShowPreview(true)}
-        className="btn btn-ghost btn-outline lg:hidden mb-4"
+        className="btn btn-ghost btn-outline lg:hidden my-6"
       >
         Show Preview
       </button>
-      <Accordion
-        title="Quiz Details"
-        index={0}
-        open={open}
-        setCurrentIndex={setCurrentIndex}
-      >
-        <CreateQuizForm
-          refetch={() => refetchQuizDetails()}
-          preFill={{
-            quizId: quizData?._id,
-            quizName: quizData?.quizName,
-            quizDescription: quizData?.quizDescription,
-            quizDuration: quizData?.quizDuration,
-            quizTopic: quizData?.quizTopic,
-          }}
-        />
-      </Accordion>
-      <Accordion
-        title="Quiz Questions"
-        index={1}
-        open={open}
-        setCurrentIndex={setCurrentIndex}
-      >
-        Update Quiz Questions
-      </Accordion>
-      <Accordion
-        title="Quiz Settings"
-        index={2}
-        open={open}
-        setCurrentIndex={setCurrentIndex}
-      >
-        Update Quiz Settings
-      </Accordion>
+      {searchParams.get("tab") === "summary" && (
+        <div className="bg-neutral bg-opacity-30 p-6 rounded-xl">
+          <CreateQuizForm
+            refetch={() => refetchQuizDetails()}
+            originalQuizData={originalQuizData}
+            preFill={quizDetails}
+          />
+        </div>
+      )}
+      {searchParams.get("tab") === "questions" && (
+        <div>
+          <Accordion
+            title="Add New Question"
+            elId="preview-accordion"
+            open={open}
+            setOpen={setOpen}
+          >
+            <AddQuizQuestion />
+          </Accordion>
+          <div className="flex items-center space-x-4 mt-6">
+            <p className="text-lg text-neutral-300">Quiz Questions</p>
+            <div className="h-[0.75px] flex-1 bg-neutral" />
+          </div>
+          <div className="mt-6 flex flex-col space-y-6">
+            {quizQuestions?.length > 0 ? (
+              <>
+                {quizQuestions?.map((question, index) => {
+                  return (
+                    <Accordion
+                      key={index}
+                      title={
+                        index + 1 + ". " + truncate(question?.question, 35)
+                      }
+                      elId={`${question?._id}-accordion`}
+                      open={open}
+                      setOpen={setOpen}
+                    >
+                      <AddQuizQuestion
+                        showModal={showModal}
+                        preFill={question}
+                      />
+                    </Accordion>
+                  );
+                })}
+              </>
+            ) : (
+              <div className="bg-neutral bg-opacity-30 p-6 px-10 rounded-xl">
+                <p className="text-lg text-neutral-300">
+                  Add a new question to get started
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

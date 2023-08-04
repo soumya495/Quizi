@@ -1,72 +1,13 @@
-import { useProfile } from "../../services/queryFunctions/profile";
 import logo from "../../assets/logo-black.png";
 import { Link } from "react-router-dom";
-import ImageAvatar from "./ImageAvatar";
-import { useMutation } from "@tanstack/react-query";
-import { apiConnector } from "../../services/apiConnector";
-import { LOGOUT } from "../../services/apis";
-import { useUser } from "../../store/useUser";
-import { useNavigate } from "react-router-dom";
-import { toast } from "react-hot-toast";
 import { AiOutlineMenu } from "react-icons/ai";
 import { FiSettings, FiLogOut } from "react-icons/fi";
 import { useLocation } from "react-router-dom";
+import LogoutModal from "./LogoutModal";
+import UserDropDown from "./UserDropdown";
 
 export default function Sidebar({ children }) {
-  const { data } = useProfile();
-  const navigate = useNavigate();
   const location = useLocation();
-
-  const userData = data?.data?.data?.user;
-
-  const { setIsAuthenticated } = useUser();
-
-  // mutation for logout
-  const mutation = useMutation({
-    mutationFn: () => {
-      return apiConnector("POST", LOGOUT);
-    },
-    onSuccess: () => {
-      setIsAuthenticated(false);
-      navigate("/login");
-      toast.success("Logged Out Successfully");
-    },
-    onError: () => {
-      toast.error("Something went wrong");
-    },
-  });
-
-  // Component for user dropdown
-  function UserDropDown() {
-    return (
-      <div className="dropdown dropdown-end">
-        <label tabIndex={0} className="btn btn-ghost btn-circle avatar">
-          <div className="w-10 h-10 rounded-full">
-            <ImageAvatar userData={userData} />
-          </div>
-        </label>
-        <ul
-          tabIndex={0}
-          className="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-200 rounded-box w-52"
-        >
-          <li>
-            <Link to="/profile">Profile</Link>
-          </li>
-          <li>
-            <Link to="/settings">Settings</Link>
-          </li>
-          <li>
-            <button
-              onClick={() => window.logout_modal.showModal()}
-              disabled={mutation.isLoading}
-            >
-              Logout
-            </button>
-          </li>
-        </ul>
-      </div>
-    );
-  }
 
   // Component for mobile navbar
   function MobileNavbar() {
@@ -109,27 +50,6 @@ export default function Sidebar({ children }) {
           {children}
         </div>
       </Link>
-    );
-  }
-
-  // Component for Logout Modal
-  function LogoutModal() {
-    return (
-      <dialog id="logout_modal" className="modal">
-        <form method="dialog" className="modal-box">
-          <h3 className="font-bold text-lg">Logout !</h3>
-          <p className="py-4">Are you sure you want to Logout </p>
-          <div className="space-x-4 mt-3">
-            <button onClick={mutation.mutate} className="btn btn-primary">
-              Logout
-            </button>
-            <button className="btn">Cancel</button>
-          </div>
-        </form>
-        <form method="dialog" className="modal-backdrop">
-          <button>close</button>
-        </form>
-      </dialog>
     );
   }
 

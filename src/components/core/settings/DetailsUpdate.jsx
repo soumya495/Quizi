@@ -30,8 +30,8 @@ export default function DetailsUpdate() {
     mutationFn: (payload) => {
       return apiConnector("PUT", UPDATE_USER, payload);
     },
-    onSuccess: (data) => {
-      console.log(data);
+    onSuccess: () => {
+      // console.log(data);
       setValue("oldPassword", "");
       setValue("password", "");
       refetch();

@@ -6,39 +6,54 @@ import { CREATE_QUIZ, UPDATE_QUIZ } from "../../../services/apis";
 import { toast } from "react-hot-toast";
 import TextInput from "../../reusable/TextInput";
 import { useEffect } from "react";
+import _ from "lodash";
+import { useState } from "react";
+import { useQuiz } from "../../../store/useQuiz";
+import TimeInput from "./TimeInput";
+import {
+  convertToHoursMinutesSeconds,
+  convertToMilliSeconds,
+  scrollToEl,
+} from "../../../services/helpers";
+import { useNavigate } from "react-router-dom";
 
-export default function CreateQuizForm({ preFill = null, refetch }) {
+export default function CreateQuizForm({
+  originalQuizData,
+  preFill = null,
+  refetch,
+}) {
   const {
     register,
     handleSubmit,
     setValue,
+    watch,
     formState: { errors },
   } = useForm();
 
   const { data } = useProfile();
+  const { setQuizDetails } = useQuiz();
+  const navigate = useNavigate();
+
+  const [updatedFields, setUpdatedFields] = useState({});
+  const [isFormUpdated, setIsFormUpdated] = useState(false);
 
   useEffect(() => {
     // preFill => form used to update quiz details
     if (preFill) {
-      // convert milliseconds to hh:mm:ss
-      const durationInMilliseconds = preFill.quizDuration;
-      const hours = Math.floor(
-        (durationInMilliseconds % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+      const { hours, minutes, seconds } = convertToHoursMinutesSeconds(
+        preFill.quizDuration
       );
-      const minutes = Math.floor(
-        (durationInMilliseconds % (1000 * 60 * 60)) / (1000 * 60)
-      );
-      const seconds = Math.floor((durationInMilliseconds % (1000 * 60)) / 1000);
-      const duration = `${hours < 10 ? `0${hours}` : hours}:${
-        minutes < 10 ? `0${minutes}` : minutes
-      }:${seconds < 10 ? `0${seconds}` : seconds}`;
 
       setValue("quizName", preFill.quizName);
-      setValue("quizDescription", preFill.quizDescription);
-      setValue("quizDuration", duration);
+      setValue("hours", hours);
+      setValue("minutes", minutes);
+      setValue("seconds", seconds);
       setValue("quizTopic", preFill.quizTopic);
+      setValue("quizDescription", preFill.quizDescription);
+
+      compareQuizzes(preFill);
     }
-  }, []);
+  }, [preFill]);
 
   const userData = data?.data?.data?.user;
 
@@ -51,13 +66,16 @@ export default function CreateQuizForm({ preFill = null, refetch }) {
       );
     },
     onSuccess: (data) => {
-      console.log("quiz data", data);
+      // console.log("quiz data", data);
       refetch();
       if (!preFill) {
         toast.success("Quiz Created Successfully");
         window.create_quiz_modal.close();
+        navigate(`/quiz-builder/${data?.data?.quiz?._id}?tab=questions`);
       } else {
         toast.success("Quiz Updated Successfully");
+        setIsFormUpdated(false);
+        setUpdatedFields({});
       }
     },
     onError: (error) => {
@@ -67,71 +85,112 @@ export default function CreateQuizForm({ preFill = null, refetch }) {
   });
 
   const onSubmit = (data) => {
-    console.log("form data", data);
+    // console.log("form data", data);
 
     // Create new Quiz
     if (!preFill) {
+      const durationInMilliseconds = convertToMilliSeconds(
+        data.hours,
+        data.minutes,
+        data.seconds
+      );
+
+      // quiz duration should be atleast 1 minutes
+      if (durationInMilliseconds < 60000) {
+        toast.error("Quiz duration should be atleast 1 minute");
+        return;
+      }
+
       mutation.mutate({
         ...data,
-        quizDuration: convertToMilliSeconds(data.quizDuration),
+        quizDuration: durationInMilliseconds,
         quizAdmin: userData._id,
       });
     } else {
-      // check if form is updated
-      const isFormUpdated =
-        data.quizName !== preFill.quizName ||
-        data.quizDescription !== preFill.quizDescription ||
-        convertToMilliSeconds(data.quizDuration) !== preFill.quizDuration ||
-        data.quizTopic !== preFill.quizTopic;
-      if (isFormUpdated) {
-        // find fields to update
-        const fieldsToUpdate = {};
-        if (data.quizName !== preFill.quizName) {
-          fieldsToUpdate.quizName = data.quizName;
-        }
-        if (data.quizDescription !== preFill.quizDescription) {
-          fieldsToUpdate.quizDescription = data.quizDescription;
-        }
-        if (convertToMilliSeconds(data.quizDuration) !== preFill.quizDuration) {
-          fieldsToUpdate.quizDuration = convertToMilliSeconds(
-            data.quizDuration
-          );
-        }
-        if (data.quizTopic !== preFill.quizTopic) {
-          fieldsToUpdate.quizTopic = data.quizTopic;
-        }
-        console.log("updated fields", fieldsToUpdate);
-        mutation.mutate(fieldsToUpdate);
-      } else {
-        toast.error("No changes made");
+      if (!isFormUpdated) {
+        toast.error("No changes detected");
+        return;
       }
+
+      // console.log("updated fields", updatedFields);
+
+      if (updatedFields?.quizDuration < 60000) {
+        toast.error("Quiz duration should be atleast 1 minute");
+        return;
+      }
+
+      mutation.mutate(updatedFields);
     }
   };
 
-  // convert hh:mm:ss to milliseconds
-  const convertToMilliSeconds = (str) => {
-    const duration = str.split(":");
-    const durationInMilliseconds =
-      parseInt(duration[0]) * 60 * 60 * 1000 +
-      parseInt(duration[1]) * 60 * 1000 +
-      parseInt(duration[2]) * 1000;
-    return durationInMilliseconds;
+  const compareQuizzes = (updatedQuizDetails) => {
+    const updatedFields = {};
+
+    if (updatedQuizDetails.quizName !== originalQuizData.quizName) {
+      updatedFields.quizName = updatedQuizDetails.quizName;
+    }
+    if (
+      updatedQuizDetails.quizDescription !== originalQuizData.quizDescription
+    ) {
+      updatedFields.quizDescription = updatedQuizDetails.quizDescription;
+    }
+    if (updatedQuizDetails.quizDuration !== originalQuizData.quizDuration) {
+      updatedFields.quizDuration = updatedQuizDetails.quizDuration;
+    }
+    if (updatedQuizDetails.quizTopic !== originalQuizData.quizTopic) {
+      updatedFields.quizTopic = updatedQuizDetails.quizTopic;
+    }
+
+    // console.log(updatedFields);
+
+    if (!_.isEmpty(updatedFields)) {
+      setIsFormUpdated(true);
+      setUpdatedFields(updatedFields);
+    } else {
+      setIsFormUpdated(false);
+      setUpdatedFields({});
+    }
   };
 
-  const validateDurationFormat = (value) => {
-    const durationRegex = /^([0-1][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$/;
-    return (
-      durationRegex.test(value) ||
-      "Please enter a valid duration in the format hh:mm:ss"
-    );
+  const handleOnChange = () => {
+    if (!preFill) return;
+    const updatedQuizDetails = {
+      ...preFill,
+      quizName: watch("quizName"),
+      quizDuration: convertToMilliSeconds(
+        watch("hours"),
+        watch("minutes"),
+        watch("seconds")
+      ),
+      quizDescription: watch("quizDescription"),
+      quizTopic: watch("quizTopic"),
+    };
+
+    compareQuizzes(updatedQuizDetails);
+    scrollToEl("quiz-details-card", "preview-wrapper");
+    setQuizDetails(updatedQuizDetails);
   };
 
-  const allowOnlyNumber = (value) => {
-    return value.replace(/[^0-9:]/g, "");
+  const resetFormChanges = () => {
+    setValue("quizName", originalQuizData.quizName);
+    setValue("hours", originalQuizData.hours);
+    setValue("minutes", originalQuizData.minutes);
+    setValue("seconds", originalQuizData.seconds);
+    setValue("quizTopic", originalQuizData.quizTopic);
+    setValue("quizDescription", originalQuizData.quizDescription);
+
+    setQuizDetails(originalQuizData);
+
+    setIsFormUpdated(false);
+    setUpdatedFields({});
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-2">
+    <form
+      onChange={handleOnChange}
+      onSubmit={handleSubmit(onSubmit)}
+      className="space-y-2"
+    >
       {/* Quiz Name */}
       <TextInput
         register={register}
@@ -142,29 +201,31 @@ export default function CreateQuizForm({ preFill = null, refetch }) {
         required={true}
       />
       {/* Quiz Duration */}
-      <div className="form-control w-full">
-        <label className="label" htmlFor="quizDur">
-          <span className="label-text">Quiz Duration (hh:mm:ss)</span>
-        </label>
-        <input
-          id="quizDur"
-          placeholder="Quiz Duration"
-          className={`input w-full max-w-none input-bordered ${
-            errors.quizDuration ? "input-error" : "input-primary"
-          } w-full`}
-          {...register("quizDuration", {
-            required: "Quiz Duration is required",
-            validate: validateDurationFormat,
-          })}
-          onChange={(e) => {
-            e.target.value = allowOnlyNumber(e.target.value);
-          }}
-        />
-        {errors.quizDuration && (
-          <span className="text-xs text-red-500 pt-1">
-            {errors.quizDuration.message}
-          </span>
-        )}
+      <div>
+        <p className="label label-text text-base">Quiz Duration</p>
+        <div className="flex items-start gap-x-4">
+          <TimeInput
+            register={register}
+            errors={errors}
+            label="Hour"
+            fieldName="hours"
+            setValue={setValue}
+          />
+          <TimeInput
+            register={register}
+            errors={errors}
+            label="Minutes"
+            fieldName="minutes"
+            setValue={setValue}
+          />
+          <TimeInput
+            register={register}
+            errors={errors}
+            label="Seconds"
+            fieldName="seconds"
+            setValue={setValue}
+          />
+        </div>
       </div>
       {/* Quiz Topic */}
       <TextInput
@@ -197,9 +258,24 @@ export default function CreateQuizForm({ preFill = null, refetch }) {
         )}
       </div>
       {/* Submit Button */}
-      <button className="btn btn-primary px-6">
-        {preFill ? "Save Changes" : "Proceed"}
-      </button>
+      <div className="flex gap-x-4">
+        <button
+          disabled={preFill && !isFormUpdated}
+          className="btn btn-primary px-6"
+        >
+          {preFill ? "Save Changes" : "Proceed"}
+        </button>
+        {preFill && (
+          <button
+            onClick={resetFormChanges}
+            type="button"
+            disabled={!isFormUpdated}
+            className="btn btn-accent"
+          >
+            Undo
+          </button>
+        )}
+      </div>
     </form>
   );
 }

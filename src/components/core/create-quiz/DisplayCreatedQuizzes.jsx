@@ -11,8 +11,6 @@ export default function DisplayCreatedQuizzes() {
 
   if (error) return "An error has occurred: " + error.message;
 
-  console.log("created quizzes", data);
-
   const { quizzes, totalPages, currentPage, totalQuizzes } = data?.data?.data;
 
   return (
@@ -46,7 +44,9 @@ export default function DisplayCreatedQuizzes() {
               {quizzes.map((quiz) => (
                 <tr
                   key={quiz._id}
-                  onClick={() => navigate(`/quiz-builder/${quiz._id}`)}
+                  onClick={() =>
+                    navigate(`/quiz-builder/${quiz._id}?tab=questions`)
+                  }
                   className="cursor-pointer hover:bg-opacity-40 hover:bg-base-100 transition-all duration-200"
                 >
                   <td>{quiz.quizName}</td>

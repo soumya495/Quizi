@@ -6,11 +6,7 @@ import {
   editQuiz,
   addQuizQuestion,
   editQuizQuestion,
-  uploadQuestionImage,
   deleteQuizQuestion,
-  deleteQuestionImage,
-  attemptQuiz,
-  submitQuiz,
 } from "../controllers/quiz.js";
 import { assignQuizAdmin, validateQuizAdmin } from "../middlewares/quiz.js";
 
@@ -26,22 +22,10 @@ router.put(
   validateQuizAdmin,
   editQuizQuestion
 );
-router.put(
-  "/upload-question-image/:quizId/:questionId",
-  validateQuizAdmin,
-  uploadQuestionImage
-);
-router.delete(
-  "/remove-question-image/:quizId/:questionId",
-  validateQuizAdmin,
-  deleteQuestionImage
-);
 router.delete(
   "/delete-question/:quizId/:questionId",
   validateQuizAdmin,
   deleteQuizQuestion
 );
-router.post("/attempt/:quizId", validateQuizAdmin, attemptQuiz);
-router.post("/submit/:quizId", validateQuizAdmin, submitQuiz);
 
 export default router;

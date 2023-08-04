@@ -1,11 +1,6 @@
 import mongoose from "mongoose";
 import Question from "../models/Question.js";
 import Quiz from "../models/Quiz.js";
-import Group from "../models/Group.js";
-import {
-  deleteImageFromCloudinary,
-  uploadImageToCloudinary,
-} from "../utils/cloudinaryUpload.js";
 import User from "../models/User.js";
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -270,9 +265,10 @@ export const addQuizQuestion = async (req, res) => {
   }
 
   const { quizId } = req.params;
-  const user = req.user;
 
-  const { question, questionOptions, questionPoints } = req.body;
+  let { question, questionOptions, questionPoints } = req.body;
+
+  questionOptions = JSON.parse(questionOptions);
 
   // Validate the request body
   if (
@@ -324,19 +320,6 @@ export const addQuizQuestion = async (req, res) => {
 
     const questId = new mongoose.Types.ObjectId();
 
-    // Upload question image if it exists
-    let questionImage = req.files?.questionImage;
-    if (questionImage) {
-      questionImage = await uploadImageToCloudinary(
-        questionImage,
-        `${user._id}/Quizzes/${quizId}/${questId}`
-      );
-      questionImage = {
-        secure_url: questionImage?.secure_url,
-        public_id: questionImage?.public_id,
-      };
-    }
-
     const quiz = await Quiz.findById(quizId);
 
     // Create the question object
@@ -344,7 +327,6 @@ export const addQuizQuestion = async (req, res) => {
       __id: questId,
       quizId,
       question,
-      questionImage: questionImage ? questionImage : undefined,
       questionType: questType,
       options: questOptions,
       points: questionPoints,
@@ -427,12 +409,8 @@ export const editQuizQuestion = async (req, res) => {
     }
 
     if (req.body?.questionOptions) {
-      if (
-        !(
-          req.body?.questionOptions?.length >= 2 &&
-          req.body?.questionOptions?.length <= 5
-        )
-      ) {
+      const questionOptions = JSON.parse(req.body?.questionOptions);
+      if (!(questionOptions?.length >= 2 && questionOptions?.length <= 5)) {
         return res
           .status(400)
           .json({ success: false, message: "Invalid Question" });
@@ -441,7 +419,7 @@ export const editQuizQuestion = async (req, res) => {
       const questOptions = [];
       let numberOfCorrectOptions = 0;
 
-      req.body?.questionOptions.forEach((questOpt) => {
+      questionOptions.forEach((questOpt) => {
         const { option, correct } = questOpt;
         if (option.trim() && typeof correct === "boolean") {
           if (correct) {
@@ -472,12 +450,16 @@ export const editQuizQuestion = async (req, res) => {
       }
     }
 
+    console.log("updated fields", fieldsToUpdate);
+
     // save the question
     const updatedQuestion = await Question.findByIdAndUpdate(
       questionId,
       fieldsToUpdate,
       { new: true }
     );
+
+    console.log("updated question", updatedQuestion);
 
     return res.status(200).json({
       success: true,
@@ -489,142 +471,6 @@ export const editQuizQuestion = async (req, res) => {
     return res
       .status(500)
       .json({ success: false, message: "Failed to update question" });
-  }
-};
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-// @desc   Upload a question image
-// route   PUT /api/quiz/upload-question-image/:quizId/:questionId
-// access  Private
-export const uploadQuestionImage = async (req, res) => {
-  // Only the quiz admin can add questions to the quiz
-  if (req.userType === "Member") {
-    return res.status(403).json({ success: false, message: "Not Authorized" });
-  }
-
-  // validate the request parameters
-  const { quizId, questionId } = req.params;
-  try {
-    const quiz = await Quiz.findById(quizId);
-    const question = await Question.findById(questionId);
-
-    if (!question) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Question doesn't exist" });
-    }
-
-    if (!quiz.quizQuestions.includes(questionId)) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Question doesn't exist" });
-    }
-
-    if (question.questionImage?.secure_url) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Question already has an image" });
-    }
-
-    if (!req.files?.questionImage) {
-      return res
-        .status(400)
-        .json({ success: false, message: "No file uploaded" });
-    }
-
-    const file = req.files.questionImage;
-
-    // validate the file type
-    if (!file.mimetype.startsWith("image")) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Please upload an image file" });
-    }
-
-    const user = req.user;
-
-    // save the image to cloudinary
-    const questionImage = await uploadImageToCloudinary(
-      file,
-      `${user._id}/Quizzes/${quizId}/${questionId}`
-    );
-
-    // save the image url to the question
-    question.questionImage = {
-      secure_url: questionImage.secure_url,
-      public_id: questionImage.public_id,
-    };
-
-    await question.save();
-
-    return res.status(200).json({
-      success: true,
-      message: "Question image uploaded successfully",
-    });
-  } catch (error) {
-    console.error("Error in uploading question image", error);
-    return res
-      .status(500)
-      .json({ success: false, message: "Failed to upload question image" });
-  }
-};
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-// @desc   Remove a question image
-// route   DELETE /api/quiz/remove-question-image/:quizId/:questionId
-// access  Private
-export const deleteQuestionImage = async (req, res) => {
-  // Only the quiz admin can add questions to the quiz
-  if (req.userType === "Member") {
-    return res.status(403).json({ success: false, message: "Not Authorized" });
-  }
-
-  const { quizId, questionId } = req.params;
-  try {
-    const quiz = await Quiz.findById(quizId);
-    const question = await Question.findById(questionId);
-
-    if (!question) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Question doesn't exist" });
-    }
-
-    if (!quiz.quizQuestions.includes(questionId)) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Question doesn't exist" });
-    }
-
-    if (!question.questionImage?.secure_url) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Question has no Image" });
-    }
-
-    // remove the image from cloudinary
-    await deleteImageFromCloudinary(question.questionImage.public_id);
-
-    // remove the image url from the question
-    question.questionImage = undefined;
-
-    await question.save();
-
-    return res.status(200).json({
-      success: true,
-      message: "Question image deleted successfully",
-    });
-  } catch (error) {
-    console.error("Error in deleting question image", error);
-    return res
-      .status(500)
-      .json({ success: false, message: "Failed to delete question image" });
   }
 };
 
@@ -688,21 +534,3 @@ export const deleteQuizQuestion = async (req, res) => {
       .json({ success: false, message: "Failed to delete question" });
   }
 };
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-// @desc   Attempt Quiz
-// route   POST /api/quiz/attempt/:quizId
-// access  Private
-export const attemptQuiz = async (req, res) => {};
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-// @desc   Submit Quiz
-// route   POST /api/quiz/submit/:quizId
-// access  Private
-export const submitQuiz = async (req, res) => {};

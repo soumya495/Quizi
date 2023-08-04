@@ -24,7 +24,7 @@ export default function Otp() {
     if (!(otpType && payload)) {
       navigate("/signup");
     }
-    console.log("payload", payload);
+    // console.log("payload", payload);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

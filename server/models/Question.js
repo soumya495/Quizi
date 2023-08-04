@@ -12,18 +12,6 @@ const QuestionSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
-    questionImage: {
-      type: {
-        secure_url: {
-          type: String,
-          default: "",
-        },
-        public_id: {
-          type: String,
-          default: "",
-        },
-      },
-    },
     questionType: {
       type: String,
       required: true,

@@ -1,8 +1,12 @@
 import QuizDetails from "./QuizDetails";
 import logo from "../../../assets/logo-black.png";
 import { Link } from "react-router-dom";
+import RenderQuestions from "./RenderQuestions";
+import { useQuiz } from "../../../store/useQuiz";
 
-export default function QuizDisplay({ quizData, setShowPreview }) {
+export default function QuizDisplay({ setShowPreview }) {
+  const { questions: quizQuestions, previewQuestion } = useQuiz();
+
   return (
     <div className="w-full h-full flex flex-col items-center">
       <div className="w-11/12 max-w-[600px] mx-auto flex-1">
@@ -13,13 +17,14 @@ export default function QuizDisplay({ quizData, setShowPreview }) {
           Close Preview
         </button>
         {/* Quiz Details */}
-        <QuizDetails
-          quizName={quizData?.quizName}
-          quizDescription={quizData?.quizDescription}
-          quizAuthor={`${quizData?.quizAdmin?.firstName} ${quizData?.quizAdmin?.lastName}`}
-          quizDuration={quizData?.quizDuration}
-          quizTopic={quizData?.quizTopic}
-        />
+        <QuizDetails />
+        {(quizQuestions?.length > 0 ||
+          Object.keys(previewQuestion).length > 0) && (
+          <>
+            <div className="h-[0.75px] w-full bg-neutral" />
+            <RenderQuestions questions={quizQuestions} />
+          </>
+        )}
       </div>
       <div className="flex flex-col items-center gap-y-2 py-6">
         <p className="text-xs">This quiz is created using</p>
