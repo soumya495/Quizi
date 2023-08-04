@@ -14,7 +14,7 @@ import { toast } from "react-hot-toast";
 export default function QuizBuilder() {
   const { id: quizId } = useParams();
 
-  const { setQuestions, setQuizDetails } = useQuiz();
+  const { setQuestions, setQuizDetails, setPreviewQuestion } = useQuiz();
 
   const {
     data,
@@ -43,6 +43,19 @@ export default function QuizBuilder() {
       toast.error("Something went wrong");
     },
   });
+
+  // Function to be executed on component unmount
+  const cleanUpFunction = () => {
+    setQuestions([]);
+    setQuizDetails({});
+    setPreviewQuestion({});
+  };
+  useEffect(() => {
+    return () => {
+      // This will run when the component unmounts
+      cleanUpFunction();
+    };
+  }, []);
 
   useEffect(() => {
     if (data) {

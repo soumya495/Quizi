@@ -12,6 +12,7 @@ import { useQuizDetails } from "../../../services/queryFunctions/quiz";
 import _ from "lodash";
 import { useState } from "react";
 import { scrollToEl } from "../../../services/helpers";
+import { useLocation } from "react-router-dom";
 
 export default function AddQuizQuestion({ preFill, showModal }) {
   const {
@@ -22,6 +23,8 @@ export default function AddQuizQuestion({ preFill, showModal }) {
     reset,
     formState: { errors },
   } = useForm();
+
+  const location = useLocation();
 
   const [isQuestionUpdated, setIsQuestionUpdated] = useState(false);
   const [updatedFields, setUpdatedFields] = useState({});
@@ -49,6 +52,7 @@ export default function AddQuizQuestion({ preFill, showModal }) {
   }, []);
 
   // For new question
+  // If tab switches and preview question is not empty
   useEffect(() => {
     // console.log("updatedFields", updatedFields);
     if (!preFill && Object.keys(previewQuestion).length > 0) {
@@ -67,7 +71,7 @@ export default function AddQuizQuestion({ preFill, showModal }) {
       });
       setIsQuestionUpdated(true);
     }
-  }, [previewQuestion]);
+  }, [location?.search]);
 
   // mutation to create a new question
   const mutation = useMutation({
@@ -76,6 +80,8 @@ export default function AddQuizQuestion({ preFill, showModal }) {
     },
     onSuccess: () => {
       setPreviewQuestion({});
+      setUpdatedFields({});
+      setIsQuestionUpdated(false);
       refetchQuizDetails();
       reset();
       toast.success("Question added successfully");
@@ -289,9 +295,9 @@ export default function AddQuizQuestion({ preFill, showModal }) {
   };
 
   const resetForm = () => {
-    setPreviewQuestion({});
     setIsQuestionUpdated(false);
     if (!preFill) {
+      setPreviewQuestion({});
       reset();
       document.getElementById("preview-card").setAttribute("hidden", true);
     } else {
