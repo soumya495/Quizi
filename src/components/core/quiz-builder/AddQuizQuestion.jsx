@@ -11,7 +11,6 @@ import Option from "./Option";
 import { useQuizDetails } from "../../../services/queryFunctions/quiz";
 import _ from "lodash";
 import { useState } from "react";
-import { scrollToEl } from "../../../services/helpers";
 import { useLocation } from "react-router-dom";
 
 export default function AddQuizQuestion({ preFill, showModal }) {
@@ -287,11 +286,6 @@ export default function AddQuizQuestion({ preFill, showModal }) {
 
       setQuestions(newQuestions);
     }
-
-    scrollToEl(
-      preFill ? `card-${preFill?._id}` : `preview-card`,
-      "preview-wrapper"
-    );
   };
 
   const resetForm = () => {

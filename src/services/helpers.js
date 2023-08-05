@@ -30,6 +30,6 @@ export function convertToHoursMinutesSeconds(durationInMilliseconds) {
 export function scrollToEl(elementId, containerId) {
   let item = document.getElementById(elementId);
   let wrapper = document.getElementById(containerId);
-  let count = item.offsetTop - wrapper.scrollTop - 80;
+  let count = item?.offsetTop - wrapper?.scrollTop - 80;
   wrapper.scrollBy({ top: count, left: 0, behavior: "smooth" });
 }
