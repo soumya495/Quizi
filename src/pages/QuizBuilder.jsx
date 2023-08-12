@@ -10,11 +10,20 @@ import { useMutation } from "@tanstack/react-query";
 import { apiConnector } from "../services/apiConnector";
 import { DELETE_QUESTION } from "../services/apis";
 import { toast } from "react-hot-toast";
+import { useSearchParams } from "react-router-dom";
 
 export default function QuizBuilder() {
   const { id: quizId } = useParams();
 
-  const { setQuestions, setQuizDetails, setPreviewQuestion } = useQuiz();
+  const {
+    setQuestions,
+    setQuizDetails,
+    setPreviewQuestion,
+    setTotalPages,
+    setCurrentPage,
+  } = useQuiz();
+
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const {
     data,
@@ -59,6 +68,20 @@ export default function QuizBuilder() {
 
   useEffect(() => {
     if (data) {
+      console.log("...data fetched...", data?.data?.data);
+
+      const totalPages = data?.data?.data?.totalPages;
+      const currentPage = data?.data?.data?.currentPage;
+
+      setTotalPages(totalPages);
+      setCurrentPage(currentPage);
+
+      const currentUrlPage = searchParams.get("page");
+      if (parseInt(currentUrlPage) > totalPages) {
+        searchParams.set("page", totalPages);
+        setSearchParams(searchParams);
+      }
+
       const quizData = data?.data?.data?.quiz;
       setQuizDetails({
         quizId: quizData?._id,

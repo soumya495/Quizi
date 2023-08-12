@@ -5,7 +5,12 @@ import RenderQuestions from "./RenderQuestions";
 import { useQuiz } from "../../../store/useQuiz";
 
 export default function QuizDisplay({ setShowPreview }) {
-  const { questions: quizQuestions, previewQuestion } = useQuiz();
+  const {
+    questions: quizQuestions,
+    previewQuestion,
+    currentPage,
+    totalPages,
+  } = useQuiz();
 
   return (
     <div className="w-full h-full flex flex-col items-center">
@@ -21,7 +26,15 @@ export default function QuizDisplay({ setShowPreview }) {
         {(quizQuestions?.length > 0 ||
           Object.keys(previewQuestion).length > 0) && (
           <>
-            <div className="h-[0.75px] w-full bg-neutral" />
+            <div className="w-full flex items-center space-x-4">
+              {totalPages > 1 ? (
+                <p className="text-xl">
+                  Page <span className="font-bold">{currentPage}</span> of{" "}
+                  <span className="font-bold">{totalPages}</span>
+                </p>
+              ) : null}
+              <div className="h-[0.75px] flex-1 bg-neutral" />
+            </div>
             <RenderQuestions questions={quizQuestions} />
           </>
         )}

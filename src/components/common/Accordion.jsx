@@ -6,7 +6,7 @@ import { useQuiz } from "../../store/useQuiz";
 
 export default function Accordion({ title, children, elId }) {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { previewQuestion } = useQuiz();
+  const { previewQuestion, totalPages } = useQuiz();
 
   // Help open the add new question accordion on page load
   // useEffect(() => {
@@ -27,9 +27,14 @@ export default function Accordion({ title, children, elId }) {
       if (elId !== "preview-accordion") {
         const questionCardId = `card-${elId.split("-")?.[0]}`;
         scrollToEl(questionCardId, "preview-wrapper");
-      } else {
-        document.getElementById("preview-card")?.removeAttribute("hidden");
-        scrollToEl("preview-card", "preview-wrapper");
+
+        // } else {
+        //   if (totalPages > 1) {
+        //     searchParams.set("page", totalPages);
+        //     setSearchParams(searchParams);
+        //   }
+        //   document.getElementById("preview-card")?.removeAttribute("hidden");
+        //   scrollToEl("preview-card", "preview-wrapper");
       }
     }
   }, [searchParams]);

@@ -13,7 +13,12 @@ export default function BuilderArea({ setShowPreview, showModal }) {
   const [open, setOpen] = useState("preview-accordion");
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const { quizDetails, questions: quizQuestions } = useQuiz();
+  const {
+    quizDetails,
+    questions: quizQuestions,
+    currentPage,
+    totalPages,
+  } = useQuiz();
 
   const { id: quizId } = useParams();
   const { data, refetch: refetchQuizDetails } = useQuizDetails(quizId);
@@ -51,6 +56,40 @@ export default function BuilderArea({ setShowPreview, showModal }) {
             <p className="text-lg text-neutral-300">Quiz Questions</p>
             <div className="h-[0.75px] flex-1 bg-neutral" />
           </div>
+          {totalPages > 1 ? (
+            <div className="flex justify-between items-center py-2 px-6 rounded-xl bg-neutral mt-6">
+              <p className="text-xl">
+                Page <span className="font-bold">{currentPage}</span> of{" "}
+                <span className="font-bold">{totalPages}</span>
+              </p>
+              <div>
+                {totalPages > 1 && currentPage > 1 ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      searchParams.set("page", currentPage - 1);
+                      setSearchParams(searchParams);
+                    }}
+                    className="btn btn-primary"
+                  >
+                    Prev
+                  </button>
+                ) : null}
+                {totalPages > 1 && currentPage < totalPages ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      searchParams.set("page", currentPage + 1);
+                      setSearchParams(searchParams);
+                    }}
+                    className="btn btn-primary"
+                  >
+                    Next
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
           <div className="mt-6 flex flex-col space-y-6">
             {quizQuestions?.length > 0 ? (
               <>
@@ -59,7 +98,11 @@ export default function BuilderArea({ setShowPreview, showModal }) {
                     <Accordion
                       key={index}
                       title={
-                        index + 1 + ". " + truncate(question?.question, 35)
+                        (currentPage - 1) * 10 +
+                        index +
+                        1 +
+                        ". " +
+                        truncate(question?.question, 35)
                       }
                       elId={`${question?._id}-accordion`}
                       open={open}

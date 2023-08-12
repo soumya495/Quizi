@@ -1,7 +1,10 @@
 import { useForm } from "react-hook-form";
 import { useQuiz } from "../../../store/useQuiz";
+import { useSearchParams } from "react-router-dom";
 
-function QuestionCard({ index, question, register, fieldName }) {
+function QuestionCard({ index, question, register, fieldName, currentPage }) {
+  const questionNumber = (currentPage - 1) * 10 + index + 1;
+
   return (
     <div
       id={`card-${question?._id}`}
@@ -11,7 +14,7 @@ function QuestionCard({ index, question, register, fieldName }) {
         {question?.points ?? 0} Points
       </p>
       <p className="text-xl font-bold break-words break-all">
-        {index + 1 + ". " + (question?.question ?? "")}
+        {questionNumber + ". " + (question?.question ?? "")}
       </p>
 
       {question?.questionImage && (
@@ -55,7 +58,8 @@ function QuestionCard({ index, question, register, fieldName }) {
 export default function RenderQuestions({ questions }) {
   const { register, handleSubmit } = useForm();
 
-  const { previewQuestion } = useQuiz();
+  const { previewQuestion, currentPage, totalPages } = useQuiz();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const onSubmit = (data) => {
     console.log(data);
@@ -70,6 +74,7 @@ export default function RenderQuestions({ questions }) {
           question={question}
           register={register}
           fieldName={`${question?._id}-selected`}
+          currentPage={currentPage}
         />
       ))}
       <div
@@ -82,9 +87,40 @@ export default function RenderQuestions({ questions }) {
           register={register}
           fieldName={`${previewQuestion?._id}-selected`}
           preview={true}
+          currentPage={currentPage}
         />
       </div>
-      <button className="btn btn-primary">Submit</button>
+      <div className="flex items-center gap-x-2">
+        {totalPages > 1 && currentPage > 1 ? (
+          <button
+            type="button"
+            onClick={() => {
+              searchParams.set("page", currentPage - 1);
+              setSearchParams(searchParams);
+            }}
+            className="btn btn-primary"
+          >
+            Prev
+          </button>
+        ) : null}
+        {currentPage === totalPages ? (
+          <button type="submit" className="btn btn-primary">
+            Submit
+          </button>
+        ) : null}
+        {totalPages > 1 && currentPage < totalPages ? (
+          <button
+            type="button"
+            onClick={() => {
+              searchParams.set("page", currentPage + 1);
+              setSearchParams(searchParams);
+            }}
+            className="btn btn-primary"
+          >
+            Next
+          </button>
+        ) : null}
+      </div>
     </form>
   );
 }
