@@ -126,6 +126,10 @@ export default function BuilderArea({ setShowPreview, showModal }) {
           </div>
         </div>
       )}
+      {searchParams.get("tab") === "settings" && (
+        <div className="bg-neutral bg-opacity-30 p-6 rounded-xl">
+        </div>
+      )}
     </div>
   );
 }

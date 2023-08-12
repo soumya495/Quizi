@@ -19,7 +19,7 @@ dotenv.config();
 // Setting up port number
 const PORT = process.env.PORT || 4000;
 
-const allowedOrigins = ["http://localhost:5173"];
+const allowedOrigins = ["http://localhost:5173","https://4c8d-2405-201-9001-c8a6-e84c-d5cf-a257-2bd1.ngrok-free.app"];
 
 // Middlewares
 app.use(express.json());
