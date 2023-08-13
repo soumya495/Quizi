@@ -1,7 +1,7 @@
 import logo from "../../../assets/logo-black.png";
 import { IoMdArrowBack } from "react-icons/io";
 import { useNavigate } from "react-router-dom";
-import UserDropDown from "../../common/UserDropdown";
+import UserDropDown from "../../common/UserDropDown";
 import LogoutModal from "../../common/LogoutModal";
 
 export default function BuilderHeader() {
