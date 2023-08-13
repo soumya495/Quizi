@@ -46,6 +46,13 @@ connect();
 // Connect to Cloudinary
 cloudinaryConnect();
 
+app.use('*', (req, res, next) => {
+  //print details of incoming request
+  console.log(`Incoming request: ${req.method} ${req.originalUrl}`);
+  //move to next middleware
+  next();
+})
+
 // App Routes
 app.use("/api/v1/user", userRoutes);
 app.use("/api/v1/profile", auth, profileRoutes);
