@@ -52,8 +52,6 @@ export const sendOtp = async (req, res) => {
   // set otptoken in cookie and send response
   res
     .cookie("otpToken", otpToken, {
-      domain: ".netlify.app",
-      path: "/",
       httpOnly: true,
       secure: true,
       sameSite: "none",
@@ -200,8 +198,6 @@ export const login = async (req, res) => {
 
   res
     .cookie("token", token, {
-      domain: ".netlify.app",
-      path: "/",
       httpOnly: true,
       secure: true,
       sameSite: "none",
