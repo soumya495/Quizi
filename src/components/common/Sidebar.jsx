@@ -4,7 +4,7 @@ import { AiOutlineMenu } from "react-icons/ai";
 import { FiSettings, FiLogOut } from "react-icons/fi";
 import { useLocation } from "react-router-dom";
 import LogoutModal from "./LogoutModal";
-import UserDropDown from "./UserDropdown";
+import UserDropDown from "./UserDropDown";
 
 export default function Sidebar({ children }) {
   const location = useLocation();

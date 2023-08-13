@@ -27,9 +27,6 @@ if(!process.env.NODE_ENV) {
   allowedOrigins.push(process.env.CLIENT_URL);
 }
 
-console.log('alllowed-origins', allowedOrigins)
-
-
 // Middlewares
 app.use(express.json());
 app.use(cookieParser());
