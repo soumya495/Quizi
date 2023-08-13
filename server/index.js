@@ -19,13 +19,8 @@ dotenv.config();
 // Setting up port number
 const PORT = process.env.PORT || 4000;
 
-const allowedOrigins = [];
-
-if(!process.env.NODE_ENV) {
-  allowedOrigins.push('http://localhost:5173');
-} else {
-  allowedOrigins.push(process.env.CLIENT_URL);
-}
+const allowedOrigins = ['https://quiziquizzes.netlify.app'];
+// const allowedOrigins = ['http://localhost:5173'];
 
 // Middlewares
 app.use(express.json());
