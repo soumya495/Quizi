@@ -12,6 +12,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "nanoid": "^4.0.2",
     "cloudinary": "^1.37.2",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
