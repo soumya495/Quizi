@@ -55,6 +55,8 @@ export const sendOtp = async (req, res) => {
       domain: ".netlify.app",
       path: "/",
       httpOnly: true,
+      secure: true,
+      sameSite: "none",
       maxAge: 5 * 60 * 1000,
     })
     .status(200)
@@ -202,6 +204,7 @@ export const login = async (req, res) => {
       path: "/",
       httpOnly: true,
       secure: true,
+      sameSite: "none",
       maxAge: 24 * 60 * 60 * 1000, // 1 day
     })
     .status(200)
